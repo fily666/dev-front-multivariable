@@ -1,0 +1,82 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens del sistema visual. Los colores de semaforización de indicadores NO viven aquí:
+ * llegan de `indicator_thresholds` en la base de datos para que un admin pueda ajustarlos
+ * sin desplegar. Aquí solo está el chrome de la aplicación.
+ */
+:root {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f6f7f9;
+  --border: #e3e6ea;
+  --border-strong: #c8ced6;
+  --foreground: #16191d;
+  --foreground-muted: #5b6470;
+  --brand: #124a8f;
+  --brand-hover: #0e3c76;
+  --brand-subtle: #eaf1fa;
+  --focus: #1f6feb;
+  --danger: #b3261e;
+  --danger-subtle: #fdecea;
+  --success: #0f7b3f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f1216;
+    --surface: #171b21;
+    --surface-muted: #1e242c;
+    --border: #2b323b;
+    --border-strong: #3d4650;
+    --foreground: #e8eaed;
+    --foreground-muted: #9aa4b0;
+    --brand: #6ba3e8;
+    --brand-hover: #8bb8ee;
+    --brand-subtle: #16273d;
+    --focus: #6ba3e8;
+    --danger: #f2887f;
+    --danger-subtle: #33201e;
+    --success: #5fbf87;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border-subtle: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-subtle: var(--brand-subtle);
+  --color-focus: var(--focus);
+  --color-danger: var(--danger);
+  --color-danger-subtle: var(--danger-subtle);
+  --color-success: var(--success);
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Foco visible en todo elemento interactivo: la encuesta debe ser navegable por teclado. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
