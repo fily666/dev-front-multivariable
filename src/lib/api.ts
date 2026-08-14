@@ -6,8 +6,15 @@
  * validación y la regla de anonimato viven en el back y no deben poder eludirse.
  */
 
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
+/**
+ * Ruta base RELATIVA al propio origen del front. El rewrite de `next.config.ts` reenvía
+ * /api/v1/* al backend.
+ *
+ * Que sea relativa es justo lo que mantiene la cookie de sesión como first-party. Una URL
+ * absoluta al dominio del back la convertiría en cookie de tercera parte y el navegador la
+ * descartaría, porque front y back son sitios distintos bajo `vercel.app`.
+ */
+const BASE_URL = '/api/v1';
 
 export class ApiError extends Error {
   constructor(
@@ -39,12 +46,15 @@ interface RequestOptions {
 }
 
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const url = new URL(`${BASE_URL}${path}`);
+  // `URLSearchParams` y no `new URL`: la base es relativa y `new URL` exige una absoluta.
+  const params = new URLSearchParams();
   for (const [key, value] of Object.entries(options.query ?? {})) {
-    if (value !== undefined) url.searchParams.set(key, String(value));
+    if (value !== undefined) params.set(key, String(value));
   }
+  const query = params.toString();
+  const url = `${BASE_URL}${path}${query ? `?${query}` : ''}`;
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
     method: options.method ?? 'GET',
     credentials: 'include',
     headers: options.body ? { 'Content-Type': 'application/json' } : undefined,

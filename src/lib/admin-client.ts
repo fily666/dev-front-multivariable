@@ -70,11 +70,15 @@ export const updateTheme = (answerId: string, theme: string | null) =>
     { method: 'PATCH', body: { theme } },
   );
 
-/** URL de descarga. Es una navegación directa para que el navegador reciba el archivo. */
+/**
+ * URL de descarga. Es una navegación directa para que el navegador reciba el archivo.
+ *
+ * Relativa como el resto del cliente: al salir por el mismo origen, el navegador adjunta la
+ * cookie de sesión. Apuntando al dominio del back la descarga llegaría sin cookie y el
+ * AdminGuard respondería 401.
+ */
 export function exportUrl(format: 'csv' | 'xlsx', campaignId?: string): string {
-  const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1';
-  const url = new URL(`${base}/admin/export`);
-  url.searchParams.set('format', format);
-  if (campaignId) url.searchParams.set('campaignId', campaignId);
-  return url.toString();
+  const params = new URLSearchParams({ format });
+  if (campaignId) params.set('campaignId', campaignId);
+  return `/api/v1/admin/export?${params.toString()}`;
 }

@@ -4,7 +4,7 @@ Aplicación de Next.js con las dos superficies del sistema: la **encuesta públi
 en el home, y el **panel de administración** protegido por sesión.
 
 - **Local:** `http://localhost:3000`
-- **API:** habla solo con NestJS (`NEXT_PUBLIC_API_URL`). Nunca con Supabase directamente.
+- **API:** habla solo con NestJS, vía el rewrite de `next.config.ts` (`API_ORIGIN`). Nunca con Supabase directamente.
 - **Especificación funcional:** [`../Contexto.md`](../Contexto.md)
 - **Variables de entorno:** [`../docs/VARIABLES-DE-ENTORNO.md`](../docs/VARIABLES-DE-ENTORNO.md)
 
@@ -185,13 +185,14 @@ consulte la guía correspondiente en `node_modules/next/dist/docs/` — lo indic
 | Root Directory | `dev-front` |
 | Framework Preset | Next.js (se detecta solo) |
 
-La única variable que cambia respecto a local es `NEXT_PUBLIC_API_URL`, que debe apuntar al
-host del backend **incluyendo `/api/v1`**.
+La única variable que cambia respecto a local es `API_ORIGIN`, que debe apuntar al host del
+backend **sin `/api/v1`**: el prefijo lo agrega el rewrite.
 
-**Monte el backend en un subdominio del mismo dominio del front.** Con el front en
-`diagnostico.linktic.com` y el back en `api-diagnostico.linktic.com`, la cookie de sesión
-funciona con `SameSite=Lax`. Con dos dominios `*.vercel.app` distintos pasa a ser cookie de
-terceros y el panel falla de forma intermitente. El detalle está en
+**El front y el back no necesitan compartir dominio.** El navegador solo habla con el
+dominio del front, y Next reenvía `/api/v1/*` al backend, así que la cookie de sesión queda
+first-party y `SameSite=Lax` basta aunque los dos proyectos vivan en dominios `*.vercel.app`
+distintos. Para que funcione, `COOKIE_DOMAIN` en el backend debe quedar **vacía**: fijarla al
+dominio del back haría que el navegador rechace la cookie. El detalle está en
 [`../docs/VARIABLES-DE-ENTORNO.md`](../docs/VARIABLES-DE-ENTORNO.md#cookies-entre-dominios).
 
 ---
