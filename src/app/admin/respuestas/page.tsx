@@ -19,7 +19,7 @@ export default function RespuestasPage() {
     <>
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-lg font-semibold text-foreground">Respuestas</h1>
+          <h1 className="text-lg text-foreground">Respuestas</h1>
           <p className="text-sm text-foreground-muted">
             Encuestas completadas de la campaña activa.
           </p>

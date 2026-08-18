@@ -14,7 +14,7 @@ export default function CualitativoPage() {
   return (
     <>
       <header className="flex flex-col gap-1">
-        <h1 className="text-lg font-semibold text-foreground">
+        <h1 className="text-lg text-foreground">
           Oportunidades de transformación
         </h1>
         <p className="text-sm text-foreground-muted">

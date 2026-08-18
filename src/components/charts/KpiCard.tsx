@@ -24,7 +24,7 @@ export function KpiCard({ label, value, unit, band, hint, children }: KpiCardPro
       </h3>
 
       <p className="flex items-baseline gap-1.5">
-        <span className="text-3xl font-semibold tabular-nums text-foreground">{value}</span>
+        <span className="text-3xl font-bold tabular-nums text-foreground">{value}</span>
         {unit && <span className="text-xs text-foreground-muted">{unit}</span>}
       </p>
 

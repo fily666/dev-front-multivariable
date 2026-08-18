@@ -17,7 +17,8 @@ export function classify(
  * bandas ilegible dentro de su propia celda.
  */
 export function inkOn(hex: string): string {
-  return relativeLuminance(hex) > 0.45 ? '#16191d' : '#ffffff';
+  // El oscuro es el neutro de la línea gráfica del Manual de Marca, no un negro puro.
+  return relativeLuminance(hex) > 0.45 ? '#333333' : '#ffffff';
 }
 
 /** Relleno tenue para fondos de celda, manteniendo el texto en tinta normal. */

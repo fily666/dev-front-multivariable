@@ -34,7 +34,7 @@ export default function AreaDetailPage({ params }: PageProps<'/admin/areas/[area
         {(data) => (
           <>
             <header className="flex flex-col gap-1">
-              <h1 className="text-lg font-semibold text-foreground">{data.area.name}</h1>
+              <h1 className="text-lg text-foreground">{data.area.name}</h1>
               <p className="text-sm text-foreground-muted">
                 Cómo evalúan a esta área las demás, y cómo evalúa ella a las otras.
               </p>

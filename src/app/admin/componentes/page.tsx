@@ -18,7 +18,7 @@ export default function ComponentesPage() {
   return (
     <>
       <header className="flex flex-col gap-1">
-        <h1 className="text-lg font-semibold text-foreground">Detalle por componente</h1>
+        <h1 className="text-lg text-foreground">Detalle por componente</h1>
         <p className="text-sm text-foreground-muted">
           Los indicadores del instrumento con su banda semafórica.
         </p>

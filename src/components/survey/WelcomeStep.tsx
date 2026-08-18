@@ -1,5 +1,6 @@
 'use client';
 
+import { LinkticLogo } from '@/components/brand/Logo';
 import type { SurveySchema } from '@/lib/survey-schema.types';
 
 interface WelcomeStepProps {
@@ -30,10 +31,11 @@ export function WelcomeStep({
   return (
     <section className="flex flex-col gap-7" aria-labelledby="welcome-title">
       <header className="flex flex-col gap-3">
+        <LinkticLogo width={200} priority className="mb-3" />
         <p className="text-xs font-medium uppercase tracking-wide text-brand">
           Encuesta interna de percepción organizacional
         </p>
-        <h1 id="welcome-title" className="text-2xl font-semibold text-foreground sm:text-3xl">
+        <h1 id="welcome-title" className="text-2xl text-foreground sm:text-3xl">
           Instrumento de Diagnóstico Organizacional
         </h1>
         <p className="text-sm leading-relaxed text-foreground-muted">
@@ -67,7 +69,7 @@ export function WelcomeStep({
       </dl>
 
       <div className="flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-foreground">Instrucciones generales</h2>
+        <h2 className="text-sm text-foreground">Instrucciones generales</h2>
         <p className="text-sm text-foreground-muted">
           Marque una sola opción en las preguntas de selección única, marque las opciones que
           correspondan en las preguntas de selección múltiple y califique de 0 a 10 los
@@ -85,7 +87,7 @@ export function WelcomeStep({
 
       <div className="flex flex-col gap-4 border-t border-border-subtle pt-6">
         <div className="flex flex-col gap-1">
-          <h2 className="text-sm font-semibold text-foreground">
+          <h2 className="text-sm text-foreground">
             Identificación {requireIdentity ? '' : '(opcional)'}
           </h2>
           {!requireIdentity && (
@@ -134,7 +136,7 @@ export function WelcomeStep({
         type="button"
         onClick={onStart}
         disabled={busy}
-        className="self-start rounded-lg bg-brand px-6 py-3 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-60"
+        className="self-start rounded-lg bg-brand px-6 py-3 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60"
       >
         {busy ? 'Preparando…' : 'Comenzar la encuesta'}
       </button>

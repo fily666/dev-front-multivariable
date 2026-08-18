@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { LinkticIsotipo } from '@/components/brand/Logo';
 import { logout } from '@/lib/admin-client';
 
 const LINKS = [
@@ -28,9 +29,14 @@ export function AdminNav() {
     <header className="border-b border-border-subtle bg-surface">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-5 py-4 sm:px-8">
         <div className="flex items-center justify-between gap-4">
-          <p className="text-sm font-semibold text-foreground">
-            Diagnóstico Organizacional LinkTIC
-          </p>
+          {/* Isotipo y no logotipo completo: a la altura de una barra el eslogan quedaría
+              por debajo del mínimo legible que fija el manual. */}
+          <div className="flex items-center gap-3">
+            <LinkticIsotipo height={30} priority />
+            <p className="text-sm font-bold text-foreground">
+              Diagnóstico Organizacional LinkTIC
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => void handleLogout()}

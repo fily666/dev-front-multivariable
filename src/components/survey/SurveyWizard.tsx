@@ -53,7 +53,7 @@ export function SurveyWizard() {
               type="button"
               onClick={() => void actions.resume()}
               disabled={state.busy}
-              className="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-60"
+              className="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60"
             >
               Continuar donde quedé
             </button>

@@ -1,11 +1,17 @@
 import type { NpsResult } from '@/lib/admin.types';
 import { formatNps } from '@/lib/score-scale';
 
-/** Colores de los tres segmentos del NPS: son estados, y van con su etiqueta. */
+/**
+ * Colores de los tres segmentos del NPS: son estados, y van con su etiqueta.
+ *
+ * Salen de la gama del Manual de Marca — verde PANTONE 3288 C para promotores y los
+ * complementarios ámbar y coral para pasivos y detractores. Son rellenos, no tinta de
+ * texto, así que se usan tal cual los define el manual.
+ */
 const SEGMENTS = [
-  { key: 'promoters', label: 'Promotores', hint: '9-10', color: '#0ca30c' },
-  { key: 'passives', label: 'Pasivos', hint: '7-8', color: '#fab219' },
-  { key: 'detractors', label: 'Detractores', hint: '0-6', color: '#d03b3b' },
+  { key: 'promoters', label: 'Promotores', hint: '9-10', color: '#008500' },
+  { key: 'passives', label: 'Pasivos', hint: '7-8', color: '#ffc947' },
+  { key: 'detractors', label: 'Detractores', hint: '0-6', color: '#f05945' },
 ] as const;
 
 /**
@@ -20,7 +26,7 @@ export function NpsGauge({ nps }: { nps: NpsResult }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-baseline gap-2">
-        <span className="text-3xl font-semibold tabular-nums text-foreground">
+        <span className="text-3xl font-bold tabular-nums text-foreground">
           {formatNps(nps.value)}
         </span>
         <span className="text-xs text-foreground-muted">de −100 a +100</span>

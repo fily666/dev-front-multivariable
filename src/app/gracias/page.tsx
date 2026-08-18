@@ -1,11 +1,14 @@
 import Link from 'next/link';
+import { LinkticLogo } from '@/components/brand/Logo';
 
 export const metadata = { title: 'Gracias · Diagnóstico Organizacional LinkTIC' };
 
 export default function GraciasPage() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 px-5 py-16 sm:px-8">
-      <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+      <LinkticLogo width={180} priority />
+
+      <h1 className="text-2xl text-foreground sm:text-3xl">
         Gracias por su participación
       </h1>
 

@@ -65,7 +65,7 @@ export function ScoreHeatmapGrid({
                         }}
                         title={`${row.areaName} · ${ASPECT_LABELS[key]}: ${formatIndex(value, 1)} (${band?.label ?? 'sin dato'})`}
                       >
-                        <span className="text-sm font-semibold tabular-nums">
+                        <span className="text-sm font-bold tabular-nums">
                           {formatIndex(value)}
                         </span>
                         <span className="sr-only"> · {band?.label ?? 'sin dato'}</span>

@@ -19,7 +19,7 @@ export default function MapaPage() {
   return (
     <>
       <header className="flex flex-col gap-1">
-        <h1 className="text-lg font-semibold text-foreground">Mapa de relacionamiento</h1>
+        <h1 className="text-lg text-foreground">Mapa de relacionamiento</h1>
         <p className="text-sm text-foreground-muted">
           Cómo se evalúan las áreas entre sí. Cada celda es el índice de relacionamiento que
           el área de la fila otorga al área de la columna.

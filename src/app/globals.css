@@ -1,43 +1,79 @@
 @import 'tailwindcss';
 
 /*
- * Tokens del sistema visual. Los colores de semaforización de indicadores NO viven aquí:
- * llegan de `indicator_thresholds` en la base de datos para que un admin pueda ajustarlos
- * sin desplegar. Aquí solo está el chrome de la aplicación.
+ * Tokens del sistema visual, derivados del Manual de Marca Corporativa LinkTIC V2.0
+ * (GCM-MAN-004). Los colores de semaforización de indicadores NO viven aquí: llegan de
+ * `indicator_thresholds` en la base de datos para que un admin pueda ajustarlos sin
+ * desplegar. Aquí solo está el chrome de la aplicación.
+ */
+
+/*
+ * Paleta literal del manual. Estos valores no se tocan: son la referencia, y los tokens
+ * semánticos de abajo se construyen a partir de ellos.
+ */
+:root {
+  --linktic-cian: #00e1ff; /* PANTONE 297 C */
+  --linktic-azul: #009cff; /* PANTONE 640 C — azul de marca */
+  --linktic-verde: #1dd600; /* PANTONE 583 C */
+  --linktic-verde-oscuro: #008500; /* PANTONE 3288 C */
+  --linktic-gris: #5e5e61; /* PANTONE Cool Gray 10 C */
+  --linktic-gris-70: #918f94; /* Cool Gray 10 C al 70 % */
+  --linktic-teal: #1eae98; /* complementario */
+  --linktic-ambar: #ffc947; /* complementario */
+  --linktic-coral: #f05945; /* complementario */
+  --linktic-coral-claro: #f28981; /* complementario */
+
+  /* Línea gráfica del manual: el azul de titulares y planos de color, y su neutro oscuro. */
+  --linktic-azur: #0080ff;
+  --linktic-carbon: #333333;
+}
+
+/*
+ * Tokens semánticos, tema claro.
+ *
+ * El azul de marca (#009cff) da 2,9:1 sobre blanco: sirve como plano de color y como
+ * identidad, pero no como tinta de texto ni como fondo de botón con texto blanco. El
+ * manual lo dice en sus usos incorrectos ("no utilizar áreas de insuficiente contraste"),
+ * así que lo interactivo usa un tono más profundo del mismo azul y el azul de marca queda
+ * para acentos gráficos.
  */
 :root {
   --background: #ffffff;
   --surface: #ffffff;
-  --surface-muted: #f6f7f9;
-  --border: #e3e6ea;
-  --border-strong: #c8ced6;
-  --foreground: #16191d;
-  --foreground-muted: #5b6470;
-  --brand: #124a8f;
-  --brand-hover: #0e3c76;
-  --brand-subtle: #eaf1fa;
-  --focus: #1f6feb;
-  --danger: #b3261e;
-  --danger-subtle: #fdecea;
-  --success: #0f7b3f;
+  --surface-muted: #f2f7fd;
+  --border: #dbe4ee;
+  --border-strong: #b6c3d2;
+  --foreground: var(--linktic-carbon);
+  --foreground-muted: var(--linktic-gris);
+  --brand: #0061c2;
+  --brand-hover: #004e9e;
+  --brand-subtle: #e6f2ff;
+  /* Acento gráfico: kickers, filetes y marcas de datos. Nunca texto pequeño sobre blanco. */
+  --brand-accent: var(--linktic-azur);
+  --focus: var(--linktic-azur);
+  --danger: #af2e1d;
+  --danger-subtle: #fdedea;
+  --success: var(--linktic-verde-oscuro);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0f1216;
-    --surface: #171b21;
-    --surface-muted: #1e242c;
-    --border: #2b323b;
-    --border-strong: #3d4650;
-    --foreground: #e8eaed;
-    --foreground-muted: #9aa4b0;
-    --brand: #6ba3e8;
-    --brand-hover: #8bb8ee;
-    --brand-subtle: #16273d;
-    --focus: #6ba3e8;
-    --danger: #f2887f;
-    --danger-subtle: #33201e;
-    --success: #5fbf87;
+    --background: #1c1e21;
+    --surface: #24272b;
+    --surface-muted: #2c3035;
+    --border: #383d43;
+    --border-strong: #4d545c;
+    --foreground: #f1f2f4;
+    --foreground-muted: var(--linktic-gris-70);
+    /* Sobre fondo oscuro el azul de marca ya rinde 5,3:1, así que aquí sí es la tinta. */
+    --brand: var(--linktic-azul);
+    --brand-hover: #4db8ff;
+    --brand-subtle: #0a2942;
+    --brand-accent: var(--linktic-azul);
+    --focus: var(--linktic-cian);
+    --danger: var(--linktic-coral-claro);
+    --danger-subtle: #3a201d;
+    --success: var(--linktic-verde);
   }
 }
 
@@ -52,17 +88,34 @@
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-brand-subtle: var(--brand-subtle);
+  --color-brand-accent: var(--brand-accent);
   --color-focus: var(--focus);
   --color-danger: var(--danger);
   --color-danger-subtle: var(--danger-subtle);
   --color-success: var(--success);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-montserrat);
 }
 
+/*
+ * Tipografía corporativa del manual: Montserrat, con Calibri como sustituto autorizado
+ * "para el uso interno y web". Biko queda fuera a propósito — el manual la reserva para
+ * el logotipo y prohíbe usarla en textos corporativos.
+ */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-montserrat), Calibri, system-ui, sans-serif;
+}
+
+/* Jerarquía del manual: títulos en Black, subtítulos en Bold, contenido en Regular. */
+:where(h1) {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+:where(h2, h3, h4) {
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 /* Foco visible en todo elemento interactivo: la encuesta debe ser navegable por teclado. */

@@ -18,7 +18,7 @@ export function PanelSection({
     <section className="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface p-5">
       <header className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+          <h2 className="text-sm text-foreground">{title}</h2>
           {description && (
             <p className="text-xs leading-relaxed text-foreground-muted">{description}</p>
           )}

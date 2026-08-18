@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { LinkticLogo } from '@/components/brand/Logo';
 import { ApiError } from '@/lib/api';
 import { login } from '@/lib/admin-client';
 
@@ -64,11 +65,14 @@ function LoginForm() {
 
   return (
     <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-7 px-5 py-16">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold text-foreground">Panel de administración</h1>
-        <p className="text-sm text-foreground-muted">
-          Diagnóstico Organizacional LinkTIC. Ingrese el token de acceso.
-        </p>
+      <header className="flex flex-col gap-5">
+        <LinkticLogo width={180} priority />
+        <div className="flex flex-col gap-2">
+          <h1 className="text-xl text-foreground">Panel de administración</h1>
+          <p className="text-sm text-foreground-muted">
+            Diagnóstico Organizacional LinkTIC. Ingrese el token de acceso.
+          </p>
+        </div>
       </header>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -105,7 +109,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={busy || token.length === 0}
-          className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-60"
+          className="rounded-lg bg-brand px-4 py-2.5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60"
         >
           {busy ? 'Verificando…' : 'Ingresar'}
         </button>

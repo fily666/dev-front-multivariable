@@ -56,7 +56,7 @@ export function BarRanking({ rows, bands, max, emptyMessage, suffix, href }: Pro
                 label
               )}
               <span className="flex shrink-0 items-baseline gap-2">
-                <span className="text-sm font-semibold tabular-nums text-foreground">
+                <span className="text-sm font-bold tabular-nums text-foreground">
                   {formatIndex(row.value, suffix === '%' ? 1 : 0)}
                   {suffix}
                 </span>
@@ -71,7 +71,7 @@ export function BarRanking({ rows, bands, max, emptyMessage, suffix, href }: Pro
                 className="h-full rounded-full"
                 style={{
                   width: `${width}%`,
-                  backgroundColor: band?.color ?? '#124a8f',
+                  backgroundColor: band?.color ?? 'var(--brand-accent)',
                 }}
               />
             </div>

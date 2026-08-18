@@ -108,7 +108,7 @@ export function RelationshipMatrixView({ payload, bands }: Props) {
                         }}
                         title={`${source.name} evalúa a ${target.name}: ${formatIndex(cell.irel, 1)} (${band?.label ?? 'sin banda'}) · ${cell.respondents} respuestas`}
                       >
-                        <span className="text-sm font-semibold tabular-nums">
+                        <span className="text-sm font-bold tabular-nums">
                           {formatIndex(cell.irel)}
                         </span>
                         <span className="sr-only"> · {band?.label ?? 'sin banda'}</span>

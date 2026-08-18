@@ -38,7 +38,7 @@ export function ReviewStep({ schema, answers, evaluableAreas, onEdit }: ReviewSt
             className="rounded-lg border border-border-subtle bg-surface p-4"
           >
             <header className="mb-3 flex items-start justify-between gap-3">
-              <h3 className="text-sm font-semibold text-foreground">
+              <h3 className="text-sm text-foreground">
                 {component.id}. {component.title}
               </h3>
               <button

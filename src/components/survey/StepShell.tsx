@@ -37,7 +37,7 @@ export function StepShell({
             {subProgress}
           </p>
         )}
-        <h2 id="step-title" className="text-xl font-semibold text-foreground sm:text-2xl">
+        <h2 id="step-title" className="text-xl text-foreground sm:text-2xl">
           {title}
         </h2>
         {intro && <p className="text-sm leading-relaxed text-foreground-muted">{intro}</p>}
@@ -69,7 +69,7 @@ export function StepShell({
           type="button"
           onClick={onNext}
           disabled={busy}
-          className="rounded-lg bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-hover disabled:opacity-60"
+          className="rounded-lg bg-brand px-6 py-2.5 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60"
         >
           {busy ? 'Guardando…' : nextLabel}
         </button>

@@ -13,7 +13,7 @@ import type { RadarPoint } from '@/lib/admin.types';
 import { EmptyState } from './InsufficientData';
 
 /** Una sola serie: el perfil de la organización. Sin leyenda — el título la nombra. */
-const SERIES_COLOR = '#124a8f';
+const SERIES_COLOR = 'var(--brand-accent)';
 
 export function RadarIndices({ points }: { points: RadarPoint[] }) {
   const withData = points.filter((point) => point.value !== null);

@@ -72,12 +72,13 @@ el cascarón evita mandar HTML vacío mientras llega el primer fetch.
 ```
 src/
 ├── app/
-│   ├── layout.tsx          html lang="es-CO", fuente Geist, robots noindex
+│   ├── layout.tsx          html lang="es-CO", Montserrat corporativa, robots noindex
 │   ├── providers.tsx       React Query
 │   ├── page.tsx            la encuesta
 │   ├── login/ gracias/
 │   └── admin/              layout con nav + las 5 vistas del panel
 ├── components/
+│   ├── brand/Logo.tsx      logotipo e isotipo, con su versión para fondo oscuro
 │   ├── survey/
 │   │   ├── SurveyWizard.tsx      orquestador
 │   │   ├── useSurveyWizard.ts    estado, autoguardado, navegación
@@ -174,7 +175,8 @@ consulte la guía correspondiente en `node_modules/next/dist/docs/` — lo indic
 - `middleware.ts` → **`proxy.ts`**, exportando `proxy()` en vez de `middleware()`
 - Tipos de ruta generados: `LayoutProps<'/'>`, `PageProps<…>` vía `next typegen`
 - Tailwind CSS 4 con **configuración CSS-first**: no hay `tailwind.config.js`, los tokens
-  viven en [`globals.css`](src/app/globals.css)
+  viven en [`globals.css`](src/app/globals.css) — y salen del Manual de Marca, según
+  [`../docs/MARCA.md`](../docs/MARCA.md)
 
 ---
 

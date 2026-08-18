@@ -14,7 +14,7 @@ export default function AdminOverviewPage() {
   return (
     <>
       <header className="flex flex-col gap-1">
-        <h1 className="text-lg font-semibold text-foreground">Resumen del diagnóstico</h1>
+        <h1 className="text-lg text-foreground">Resumen del diagnóstico</h1>
         <p className="text-sm text-foreground-muted">
           Indicadores agregados de la campaña activa.
         </p>
