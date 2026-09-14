@@ -17,7 +17,9 @@ export function PhaseRoadmap() {
         <span className="text-xs text-foreground-muted">15 minutos en total</span>
       </div>
 
-      <ol className="flex flex-col gap-2.5">
+      {/* Dos por fila en cuanto hay ancho: cuatro tarjetas apiladas empujan el botón de
+          empezar fuera de la primera pantalla, y el recorrido se entiende igual de bien. */}
+      <ol className="grid gap-2.5 sm:grid-cols-2">
         {SURVEY_PHASES.map((phase) => (
           <li
             key={phase.id}

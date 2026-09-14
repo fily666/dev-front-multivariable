@@ -30,7 +30,12 @@ export function ScaleField({
   const describedBy = error ? `${groupId}-error` : undefined;
 
   return (
-    <div className={compact ? 'flex flex-col gap-1.5' : 'flex flex-col gap-2'}>
+    /*
+     * Acotada aunque la columna sea ancha: estirada a mil píxeles cada número se convierte
+     * en un botón de ochenta de ancho por veinte de alto, y la escala deja de leerse como
+     * una regla graduada.
+     */
+    <div className={compact ? 'flex flex-col gap-1.5' : 'flex max-w-2xl flex-col gap-2'}>
       <div
         role="radiogroup"
         aria-labelledby={`${groupId}-label`}

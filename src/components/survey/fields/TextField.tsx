@@ -7,7 +7,7 @@ export function TextField({ question, value, onChange, error, disabled }: FieldP
   const maxLength = question.maxLength ?? 1000;
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex max-w-3xl flex-col gap-1.5">
       <textarea
         rows={5}
         value={text}

@@ -3,6 +3,7 @@
 import { useId } from 'react';
 import type { QuestionOption } from '@/lib/survey-schema.types';
 import type { FieldProps } from './field.types';
+import { OptionList } from './OptionList';
 import { groupOptions, hasVisibleGroups } from './option-groups';
 
 export function SingleChoiceField({
@@ -38,7 +39,7 @@ export function SingleChoiceField({
           })
         }
         className={[
-          'flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors',
+          'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors',
           'disabled:cursor-not-allowed disabled:opacity-50',
           isSelected
             ? 'border-phase bg-phase-subtle text-foreground'
@@ -65,18 +66,10 @@ export function SingleChoiceField({
         role="radiogroup"
         aria-labelledby={`${groupId}-label`}
         aria-invalid={error ? true : undefined}
-        className="flex flex-col gap-4"
       >
-        {groups.map((group, index) => (
-          <div key={group.code ?? `sueltas-${index}`} className="flex flex-col gap-2">
-            {showHeadings && group.label && (
-              <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                {group.label}
-              </p>
-            )}
-            {group.options.map(renderOption)}
-          </div>
-        ))}
+        <OptionList groups={groups} showHeadings={showHeadings}>
+          {renderOption}
+        </OptionList>
       </div>
 
       {selectedOption?.allowsText && (
@@ -94,7 +87,7 @@ export function SingleChoiceField({
               otherText: event.target.value,
             })
           }
-          className="rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-muted"
+          className="max-w-md rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-muted"
         />
       )}
 

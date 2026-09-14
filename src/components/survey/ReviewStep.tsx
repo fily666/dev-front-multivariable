@@ -76,63 +76,70 @@ export function ReviewStep({
             Bloque {phase.order} · {phase.name}
           </h3>
 
-          {phase.componentIds.map((componentId) => {
-            const component = schema.components.find((item) => item.id === componentId);
-            if (!component) return null;
-            const perArea = layoutOf(component) !== 'simple';
+          {/*
+           * Las tarjetas del bloque se reparten en dos columnas en PC. Repasar dieciséis
+           * componentes en fila india es la parte de la encuesta que más se abandona: si el
+           * resumen entra casi entero en pantalla, «Enviar» deja de estar a cinco scrolls.
+           */}
+          <div className="lg:columns-2 lg:gap-4">
+            {phase.componentIds.map((componentId) => {
+              const component = schema.components.find((item) => item.id === componentId);
+              if (!component) return null;
+              const perArea = layoutOf(component) !== 'simple';
 
-            return (
-              <section
-                key={component.id}
-                className="rounded-lg border border-phase-border bg-surface p-4"
-              >
-                <header className="mb-3 flex items-start justify-between gap-3">
-                  <h4 className="text-sm font-bold text-foreground">
-                    {component.id}. {component.title}
-                  </h4>
-                  <button
-                    type="button"
-                    onClick={() => onEdit(component.id)}
-                    className="shrink-0 text-xs font-medium text-phase hover:underline"
-                  >
-                    Editar
-                  </button>
-                </header>
+              return (
+                <section
+                  key={component.id}
+                  className="rounded-lg border border-phase-border bg-surface p-4 lg:mb-4 lg:break-inside-avoid lg:last:mb-0"
+                >
+                  <header className="mb-3 flex items-start justify-between gap-3">
+                    <h4 className="text-sm font-bold text-foreground">
+                      {component.id}. {component.title}
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => onEdit(component.id)}
+                      className="shrink-0 text-xs font-medium text-phase hover:underline"
+                    >
+                      Editar
+                    </button>
+                  </header>
 
-                <dl className="flex flex-col gap-3">
-                  {component.questions.map((question) => {
-                    const targets =
-                      question.perArea && perArea
-                        ? evaluableAreas
-                        : [{ code: GLOBAL_AREA_CODE, name: '' }];
+                  <dl className="flex flex-col gap-3">
+                    {component.questions.map((question) => {
+                      const targets =
+                        question.perArea && perArea
+                          ? evaluableAreas
+                          : [{ code: GLOBAL_AREA_CODE, name: '' }];
 
-                    return targets.map((target) => {
-                      const key = fieldName(question.code, target.code);
-                      return (
-                        <div
-                          key={key}
-                          className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3"
-                        >
-                          <dt className="text-xs text-foreground-muted sm:w-1/2 sm:shrink-0">
-                            {question.label}
-                            {target.name && <span className="text-phase"> · {target.name}</span>}
-                          </dt>
-                          <dd>
-                            <QuestionRenderer
-                              mode="review"
-                              question={question}
-                              value={answers[key]}
-                              onChange={() => undefined}
-                            />
-                          </dd>
-                        </div>
-                      );
-                    });
-                  })}
-                </dl>
-              </section>
-            );
-          })}
+                      return targets.map((target) => {
+                        const key = fieldName(question.code, target.code);
+                        return (
+                          <div
+                            key={key}
+                            className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-3"
+                          >
+                            <dt className="text-xs text-foreground-muted sm:w-1/2 sm:shrink-0">
+                              {question.label}
+                              {target.name && <span className="text-phase"> · {target.name}</span>}
+                            </dt>
+                            <dd>
+                              <QuestionRenderer
+                                mode="review"
+                                question={question}
+                                value={answers[key]}
+                                onChange={() => undefined}
+                              />
+                            </dd>
+                          </div>
+                        );
+                      });
+                    })}
+                  </dl>
+                </section>
+              );
+            })}
+          </div>
         </div>
       ))}
     </div>

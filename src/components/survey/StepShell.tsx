@@ -51,7 +51,11 @@ export function StepShell({
         <h2 id="step-title" className="text-xl text-phase sm:text-2xl">
           {title}
         </h2>
-        {intro && <p className="text-sm leading-relaxed text-foreground-muted">{intro}</p>}
+        {intro && (
+          <p className="max-w-prose text-sm leading-relaxed text-foreground-muted">
+            {intro}
+          </p>
+        )}
       </header>
 
       {subProgress}
@@ -124,7 +128,11 @@ export function QuestionBlock({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1">
+      {/*
+       * El enunciado y su ayuda se leen, no se recorren: se quedan en su medida aunque la
+       * pantalla dé para más. Lo que aprovecha el ancho es lo que viene debajo.
+       */}
+      <div className="flex max-w-prose flex-col gap-1">
         <p className="text-sm font-medium text-foreground">
           {label}
           {!required && (

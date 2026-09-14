@@ -2,6 +2,7 @@
 
 import type { QuestionOption } from '@/lib/survey-schema.types';
 import type { FieldProps } from './field.types';
+import { OptionList } from './OptionList';
 import { groupOptions, hasVisibleGroups } from './option-groups';
 
 export function MultiChoiceField({
@@ -128,7 +129,10 @@ export function MultiChoiceField({
                 strokeLinejoin="round"
               />
             </svg>
-            <span className="hidden sm:inline">
+            {/* En cuanto la lista se parte en tres queda solo la estrella: el rótulo se
+                comería el ancho de la etiqueta del área, que es lo que hay que leer. La
+                columna no se ensancha más allá de ahí, así que tampoco vuelve en xl. */}
+            <span className="hidden sm:max-lg:inline">
               {isPrimary ? 'Principal' : 'Marcar'}
             </span>
             <span className="sr-only">
@@ -144,17 +148,10 @@ export function MultiChoiceField({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-4" aria-invalid={error ? true : undefined}>
-        {groups.map((group, index) => (
-          <div key={group.code ?? `sueltas-${index}`} className="flex flex-col gap-2">
-            {showHeadings && group.label && (
-              <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                {group.label}
-              </p>
-            )}
-            {group.options.map(renderOption)}
-          </div>
-        ))}
+      <div aria-invalid={error ? true : undefined}>
+        <OptionList groups={groups} showHeadings={showHeadings}>
+          {renderOption}
+        </OptionList>
       </div>
 
       {question.maxSelect != null && (
@@ -183,7 +180,7 @@ export function MultiChoiceField({
           onChange={(event) =>
             onChange({ kind: 'options', values: selected, otherText: event.target.value })
           }
-          className="rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-muted"
+          className="max-w-md rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-muted"
         />
       )}
 

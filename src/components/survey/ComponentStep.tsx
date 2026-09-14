@@ -120,12 +120,23 @@ export function ComponentStepPerAreaList({
             required={question.required}
           >
             {isPerArea ? (
-              <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-5 lg:gap-3.5">
                 {group.map(({ targetArea, areaName }) => {
                   const key = fieldName(question.code, targetArea);
                   return (
-                    <div key={key} className="flex flex-col gap-2">
-                      <p className="text-sm font-medium text-phase">{areaName ?? targetArea}</p>
+                    /*
+                     * En PC el área y su escala son una fila, no dos: cinco áreas apiladas
+                     * con el nombre encima de cada regla ocupan el doble de alto y obligan
+                     * a bajar para comparar la cuarta con la primera, que es exactamente lo
+                     * que esta pantalla pide hacer.
+                     */
+                    <div
+                      key={key}
+                      className="flex flex-col gap-2 lg:grid lg:grid-cols-[minmax(0,13rem)_minmax(0,1fr)] lg:items-center lg:gap-5"
+                    >
+                      <p className="text-sm font-medium text-phase lg:text-right">
+                        {areaName ?? targetArea}
+                      </p>
                       <QuestionRenderer
                         compact
                         question={question}
