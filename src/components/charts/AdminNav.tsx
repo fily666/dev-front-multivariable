@@ -3,10 +3,17 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LinkticIsotipo } from '@/components/brand/Logo';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { logout } from '@/lib/admin-client';
 
+/**
+ * El orden es el del uso: se entra por el dashboard, y las demás son el detalle de lo que
+ * el dashboard resume. «Resumen» desapareció como nombre porque el dashboard ES el
+ * resumen; lo que tenía de propio —cómo se calculan los índices— vive ahora en «Índices».
+ */
 const LINKS = [
-  { href: '/admin', label: 'Resumen' },
+  { href: '/admin', label: 'Dashboard' },
+  { href: '/admin/indices', label: 'Índices' },
   { href: '/admin/componentes', label: 'Componentes' },
   { href: '/admin/mapa', label: 'Mapa de relacionamiento' },
   { href: '/admin/cualitativo', label: 'Cualitativo' },
@@ -37,13 +44,16 @@ export function AdminNav() {
               Diagnóstico Organizacional LinkTIC
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => void handleLogout()}
-            className="text-xs font-medium text-foreground-muted hover:text-foreground"
-          >
-            Cerrar sesión
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void handleLogout()}
+              className="text-xs font-medium text-foreground-muted hover:text-foreground"
+            >
+              Cerrar sesión
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
 
         <nav aria-label="Secciones del panel">

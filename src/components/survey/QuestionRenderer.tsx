@@ -31,6 +31,8 @@ interface QuestionRendererProps {
   error?: string;
   disabled?: boolean;
   compact?: boolean;
+  /** Marcación adicional sobre una opción ya seleccionada; ver `FieldProps`. */
+  primary?: FieldProps['primary'];
   mode?: 'answer' | 'review';
 }
 

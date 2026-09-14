@@ -10,6 +10,17 @@ export interface FieldProps {
   disabled?: boolean;
   /** Variante compacta: una fila por área, para el NPS del componente 9. */
   compact?: boolean;
+  /**
+   * Marcación adicional sobre una de las opciones ya seleccionadas. Hoy la usa el
+   * selector de áreas de 1.1 para señalar la relación principal, que es una respuesta
+   * aparte (`c1_area_principal`) pero se marca dentro de la misma lista.
+   */
+  primary?: {
+    value: string | null;
+    onChange: (value: string | null) => void;
+    label: string;
+    error?: string;
+  };
 }
 
 /** Identificador estable del campo, para `htmlFor` y `aria-describedby`. */

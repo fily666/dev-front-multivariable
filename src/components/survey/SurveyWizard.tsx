@@ -1,13 +1,22 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { AreaProgress } from './AreaProgress';
 import { ComponentStep, ComponentStepPerAreaList } from './ComponentStep';
-import { ProgressBar } from './ProgressBar';
+import { PhaseBand, PhaseMilestone } from './PhaseBanner';
+import { PhaseProgress } from './PhaseProgress';
 import { ReviewStep } from './ReviewStep';
 import { StepShell } from './StepShell';
 import { WelcomeStep } from './WelcomeStep';
 import { useSurveyWizard } from './useSurveyWizard';
+import { fieldName } from '@/lib/survey-schema.types';
+import {
+  SURVEY_PHASES,
+  phaseOfStep,
+  phaseSegments,
+  positionInPhase,
+} from './survey-phases';
 import { layoutOf } from './wizard-steps';
 
 export function SurveyWizard() {
@@ -24,6 +33,27 @@ export function SurveyWizard() {
   useEffect(() => {
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [state.stepIndex]);
+
+  const phase = phaseOfStep(currentStep);
+  const segments = useMemo(
+    () => phaseSegments(state.steps, state.stepIndex),
+    [state.steps, state.stepIndex],
+  );
+  const inPhase = useMemo(
+    () => positionInPhase(state.steps, state.stepIndex),
+    [state.steps, state.stepIndex],
+  );
+
+  /** Respondidas del paso, para el contador del pie. */
+  const answered = useMemo(() => {
+    const required = currentEntries.filter((entry) => entry.question.required !== false);
+    return {
+      total: required.length,
+      done: required.filter(
+        (entry) => state.answers[fieldName(entry.question.code, entry.targetArea)] !== undefined,
+      ).length,
+    };
+  }, [currentEntries, state.answers]);
 
   if (state.loading) {
     return (
@@ -63,6 +93,7 @@ export function SurveyWizard() {
         <WelcomeStep
           schema={state.schema}
           identity={state.identity}
+          identityErrors={state.identityErrors}
           onIdentityChange={actions.setIdentity}
           onStart={() => void actions.begin()}
           busy={state.busy}
@@ -73,10 +104,22 @@ export function SurveyWizard() {
   }
 
   const totalSteps = state.steps.length;
+  const areaName =
+    currentStep?.kind === 'component'
+      ? evaluableAreas.find((area) => area.code === currentStep.areaCode)?.name
+      : undefined;
 
   return (
-    <div className="flex flex-col gap-7">
-      <ProgressBar
+    /*
+     * `data-phase` es lo único que hay que poner para recolorear la pantalla entera: los
+     * tokens `--phase-*` de `globals.css` cuelgan de él, así que el título, la cinta, la
+     * escala 0-10 y el botón de continuar cambian de tono a la vez, sin pasar el color
+     * por props hasta el último campo. Fuera de un bloque (bienvenida, revisión) los
+     * tokens valen lo mismo que la marca.
+     */
+    <div className="flex flex-col gap-7" data-phase={phase?.id}>
+      <PhaseProgress
+        segments={segments}
         current={state.stepIndex + 1}
         total={totalSteps}
         remainingMinutes={state.remainingMinutes}
@@ -86,6 +129,7 @@ export function SurveyWizard() {
         <WelcomeStep
           schema={state.schema}
           identity={state.identity}
+          identityErrors={state.identityErrors}
           onIdentityChange={actions.setIdentity}
           onStart={() => void actions.goNext()}
           busy={state.busy}
@@ -93,17 +137,44 @@ export function SurveyWizard() {
         />
       )}
 
-      {currentStep?.kind === 'component' && currentComponent && (
+      {currentStep?.kind === 'component' && currentComponent && phase && (
         <StepShell
           title={`${currentComponent.id}. ${currentComponent.title}`}
           intro={currentComponent.intro}
-          subProgress={
-            currentStep.areaTotal && currentStep.areaTotal > 1
-              ? `Evaluando ${evaluableAreas.find((area) => area.code === currentStep.areaCode)?.name ?? ''} · área ${currentStep.areaIndex} de ${currentStep.areaTotal}`
-              : undefined
+          banner={
+            // El hito solo en la primera pantalla del bloque; en las demás, la cinta.
+            inPhase?.position === 1 ? (
+              <PhaseMilestone
+                phase={phase}
+                previous={SURVEY_PHASES[phase.order - 2] ?? null}
+                screens={inPhase.total}
+              />
+            ) : (
+              <PhaseBand
+                phase={phase}
+                detail={`Componente ${currentComponent.id} de ${state.schema.components.length}`}
+              />
+            )
           }
+          subProgress={
+            currentStep.areaTotal && currentStep.areaTotal > 1 && areaName ? (
+              <AreaProgress
+                areaName={areaName}
+                index={currentStep.areaIndex ?? 1}
+                total={currentStep.areaTotal}
+              />
+            ) : undefined
+          }
+          answered={answered}
           onBack={actions.goBack}
           onNext={() => void actions.goNext()}
+          nextLabel={
+            currentStep.areaTotal && currentStep.areaTotal > 1
+              ? currentStep.areaIndex! < currentStep.areaTotal
+                ? 'Siguiente área'
+                : 'Continuar'
+              : 'Continuar'
+          }
           busy={state.busy}
           error={state.stepError}
         >
@@ -140,6 +211,7 @@ export function SurveyWizard() {
             schema={state.schema}
             answers={state.answers}
             evaluableAreas={evaluableAreas}
+            identity={state.identity}
             onEdit={actions.goToComponent}
           />
         </StepShell>

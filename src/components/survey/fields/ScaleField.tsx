@@ -54,8 +54,8 @@ export function ScaleField({
                 'rounded-md border py-2 text-sm font-medium transition-colors',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 isSelected
-                  ? 'border-brand bg-brand text-white'
-                  : 'border-border-subtle bg-surface text-foreground hover:border-brand hover:bg-brand-subtle',
+                  ? 'border-phase bg-phase text-phase-on'
+                  : 'border-border-subtle bg-surface text-foreground hover:border-phase hover:bg-phase-subtle',
               ].join(' ')}
             >
               {option}

@@ -1,6 +1,24 @@
 @import 'tailwindcss';
 
 /*
+ * ============ CLARO / OSCURO ============
+ *
+ * El tema no se lee de `prefers-color-scheme` en el CSS: se lee de `data-theme` en el
+ * <html>. El script en línea de `layout.tsx` lo resuelve antes del primer pintado —
+ * primero lo que el visitante eligió en este navegador, y si no eligió nada, lo que pide
+ * el sistema— y el interruptor de la barra lo cambia en caliente.
+ *
+ * Pasa por un atributo y no por la media query porque una preferencia que solo el sistema
+ * decide no se puede invertir desde la aplicación, y aquí hace falta poder invertirla: el
+ * panel se proyecta y se imprime, y quien lo presenta necesita el tema claro aunque su
+ * portátil esté en oscuro.
+ *
+ * `color-scheme` va de la mano para que lo que pinta el navegador y no nosotros —barras de
+ * desplazamiento, controles nativos, el fondo antes de que cargue la hoja— acompañe al tema.
+ */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
  * Tokens del sistema visual, derivados del Manual de Marca Corporativa LinkTIC V2.0
  * (GCM-MAN-004). Los colores de semaforización de indicadores NO viven aquí: llegan de
  * `indicator_thresholds` en la base de datos para que un admin pueda ajustarlos sin
@@ -38,6 +56,8 @@
  * para acentos gráficos.
  */
 :root {
+  color-scheme: light;
+
   --background: #ffffff;
   --surface: #ffffff;
   --surface-muted: #f2f7fd;
@@ -56,25 +76,233 @@
   --success: var(--linktic-verde-oscuro);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1c1e21;
-    --surface: #24272b;
-    --surface-muted: #2c3035;
-    --border: #383d43;
-    --border-strong: #4d545c;
-    --foreground: #f1f2f4;
-    --foreground-muted: var(--linktic-gris-70);
-    /* Sobre fondo oscuro el azul de marca ya rinde 5,3:1, así que aquí sí es la tinta. */
-    --brand: var(--linktic-azul);
-    --brand-hover: #4db8ff;
-    --brand-subtle: #0a2942;
-    --brand-accent: var(--linktic-azul);
-    --focus: var(--linktic-cian);
-    --danger: var(--linktic-coral-claro);
-    --danger-subtle: #3a201d;
-    --success: var(--linktic-verde);
-  }
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --background: #1c1e21;
+  --surface: #24272b;
+  --surface-muted: #2c3035;
+  --border: #383d43;
+  --border-strong: #4d545c;
+  --foreground: #f1f2f4;
+  --foreground-muted: var(--linktic-gris-70);
+  /* Sobre fondo oscuro el azul de marca ya rinde 5,3:1, así que aquí sí es la tinta. */
+  --brand: var(--linktic-azul);
+  --brand-hover: #4db8ff;
+  --brand-subtle: #0a2942;
+  --brand-accent: var(--linktic-azul);
+  --focus: var(--linktic-cian);
+  --danger: var(--linktic-coral-claro);
+  --danger-subtle: #3a201d;
+  --success: var(--linktic-verde);
+}
+
+/*
+ * ============ FASES DE LA ENCUESTA ============
+ *
+ * La encuesta se recorre en cuatro tramos y cada uno tiene su color. No es decoración:
+ * es la respuesta a "¿en qué parte voy?" sin obligar a leer el número de paso. El color
+ * cambia con el TIPO de pregunta, así que el cambio de tono coincide siempre con un
+ * cambio de esfuerzo mental — puntuar áreas, describir la operación, hablar de cultura,
+ * proponer cambios.
+ *
+ * Los cuatro tonos salen del Manual de Marca: azul y verde de la gama principal, teal y
+ * ámbar de los complementarios. Ninguno es el coral, que queda reservado para el error.
+ *
+ * Cada fase expone los mismos cinco tokens, así que los componentes del wizard se pintan
+ * con `text-phase`, `bg-phase-subtle`, `border-phase`… y recolorean solos al cambiar de
+ * fase, sin pasar el color por props. Fuera de un `[data-phase]` los tokens valen lo
+ * mismo que la marca, que es lo que necesitan la bienvenida y la revisión.
+ *
+ * `--phase-on` es la tinta que va ENCIMA de un plano de fase relleno. En claro es blanco;
+ * en oscuro los cuatro tonos son brillantes y el blanco encima daría 1,5:1 en el ámbar,
+ * así que ahí la tinta es el carbón del fondo.
+ */
+:root {
+  --phase-ink: var(--brand);
+  --phase-ink-hover: var(--brand-hover);
+  --phase-accent: var(--brand-accent);
+  --phase-subtle: var(--brand-subtle);
+  --phase-border: #b3d4f5;
+  --phase-on: #ffffff;
+}
+
+/* Fase 1 · Relacionamiento — azul de marca. Con quién trabaja y cómo lo puntúa. */
+[data-phase='relacionamiento'] {
+  --phase-ink: #0061c2; /* 6,0:1 sobre blanco */
+  --phase-ink-hover: #004e9e;
+  --phase-accent: var(--linktic-azur);
+  --phase-subtle: #e6f2ff;
+  --phase-border: #b3d4f5;
+}
+
+/* Fase 2 · Operación — teal complementario. Cómo funciona la estructura. */
+[data-phase='operacion'] {
+  --phase-ink: #0d6d5f; /* 6,2:1 sobre blanco */
+  --phase-ink-hover: #0a564b;
+  --phase-accent: var(--linktic-teal);
+  --phase-subtle: #e2f5f1;
+  --phase-border: #a9ddd3;
+}
+
+/* Fase 3 · Cultura — verde de marca. Cómo nos tratamos y aprendemos. */
+[data-phase='cultura'] {
+  --phase-ink: #12690a; /* 6,9:1 sobre blanco */
+  --phase-ink-hover: #0d5207;
+  --phase-accent: var(--linktic-verde);
+  --phase-subtle: #e8f9e3;
+  --phase-border: #b4e6a8;
+}
+
+/* Fase 4 · Cierre — ámbar complementario. Qué debemos cambiar. */
+[data-phase='cierre'] {
+  --phase-ink: #8a5300; /* 6,3:1 sobre blanco */
+  --phase-ink-hover: #6e4200;
+  --phase-accent: var(--linktic-ambar);
+  --phase-subtle: #fff4de;
+  --phase-border: #f0d49a;
+}
+
+[data-theme='dark'] {
+  --phase-border: #17466b;
+  --phase-on: #1c1e21;
+}
+
+[data-theme='dark'] [data-phase='relacionamiento'] {
+  --phase-ink: var(--linktic-azul); /* 5,7:1 sobre el fondo oscuro */
+  --phase-ink-hover: #4db8ff;
+  --phase-accent: var(--linktic-azul);
+  --phase-subtle: #0a2942;
+  --phase-border: #17466b;
+}
+
+[data-theme='dark'] [data-phase='operacion'] {
+  --phase-ink: var(--linktic-teal); /* 6,0:1 */
+  --phase-ink-hover: #3ecfb8;
+  --phase-subtle: #0c2d29;
+  --phase-border: #1a5148;
+}
+
+[data-theme='dark'] [data-phase='cultura'] {
+  --phase-ink: var(--linktic-verde); /* 8,5:1 */
+  --phase-ink-hover: #5ce34a;
+  --phase-subtle: #0f2a0c;
+  --phase-border: #1f5418;
+}
+
+[data-theme='dark'] [data-phase='cierre'] {
+  --phase-ink: var(--linktic-ambar); /* 10,9:1 */
+  --phase-ink-hover: #ffd77a;
+  --phase-subtle: #33260a;
+  --phase-border: #5c4715;
+}
+
+/*
+ * ============ TONO DE LAS LECTURAS DEL PANEL ============
+ *
+ * Cada conclusión del panel se pinta según lo que concluye. No son los colores del
+ * semáforo —esos llegan de `indicator_thresholds` y un admin los edita— sino el chrome
+ * que los acompaña, así que viven aquí y están elegidos para rendir como TINTA.
+ *
+ * Están alineados con el semáforo a propósito: verde significa lo mismo en toda la
+ * aplicación, y el lector no tiene que aprender dos códigos.
+ *
+ * El tono nunca va solo: cada lectura lleva además su icono y su frase, porque las cuatro
+ * bandas del semáforo no se distinguen por color a secas (naranja y ámbar se separan
+ * ΔE 5,5 con deuteranopia).
+ */
+:root {
+  --tone-good: #0f7b3f; /* 5,4:1 sobre blanco */
+  --tone-neutral: var(--brand);
+  --tone-warn: #c2570f; /* 4,5:1 */
+  --tone-bad: #b3261e; /* 6,5:1 */
+
+  --tone-good-subtle: #e8f5ed;
+  --tone-neutral-subtle: var(--brand-subtle);
+  --tone-warn-subtle: #fdefe4;
+  --tone-bad-subtle: #fdeceb;
+}
+
+[data-theme='dark'] {
+  --tone-good: #45c47a; /* 7,5:1 sobre el fondo oscuro */
+  --tone-neutral: var(--linktic-azul);
+  --tone-warn: #f0853c; /* 6,5:1 */
+  --tone-bad: #f08278; /* 6,5:1 */
+
+  --tone-good-subtle: #11291b;
+  --tone-neutral-subtle: var(--brand-subtle);
+  --tone-warn-subtle: #2e1d0f;
+  --tone-bad-subtle: #2f1917;
+}
+
+/*
+ * ============ RAMPA ORDINAL ============
+ *
+ * Un solo tono, cinco pasos de luminancia monótona, para escalas ORDENADAS donde el orden
+ * es el dato: los tramos de tiempo de respuesta. Nunca para categorías sin orden natural —
+ * ahí el color estaría re-codificando el largo de la barra y gastando el único canal libre.
+ *
+ * En claro va de claro a oscuro; en oscuro se invierte, porque el extremo que debe
+ * despegarse del fondo es el contrario. Los dos juegos están verificados: luminancia
+ * monótona, saltos de ΔL ≥ 0,06 y el extremo más cercano a la superficie por encima de 2:1.
+ */
+:root {
+  --ramp-1: #86b8e8;
+  --ramp-2: #5d9cdc;
+  --ramp-3: #3a7cc9;
+  --ramp-4: #1c5da8;
+  --ramp-5: #08427a;
+}
+
+[data-theme='dark'] {
+  --ramp-1: #3570b4;
+  --ramp-2: #4f90d6;
+  --ramp-3: #77b0e6;
+  --ramp-4: #a3cdf1;
+  --ramp-5: #cfe6fa;
+}
+
+/*
+ * Par divergente: para magnitudes con dos polos y ningún lado «bueno», como la brecha de
+ * percepción. Frío contra cálido, que es lo que hace que se lean como opuestos (dos fríos
+ * no lo logran), con el neutro de la interfaz en el medio. Verificado: ΔE 25,9 con
+ * protanopia y 27,9 con visión normal.
+ */
+:root {
+  --diverge-cool: #0061c2;
+  --diverge-warm: #8a5300;
+}
+
+[data-theme='dark'] {
+  --diverge-cool: var(--linktic-azul);
+  --diverge-warm: var(--linktic-ambar);
+}
+
+/*
+ * ============ RELLENO DE LAS MATRICES ============
+ *
+ * Las matrices densas no se pintan con el color de banda a plena saturación: dos docenas
+ * de bloques saturados se leen como ruido y aplastan el número, que es el dato real. Se
+ * pintan con un velo del color, y la intensidad del velo sube con la severidad — así el
+ * parche rojo se ve desde lejos sin que la cuadrícula grite.
+ *
+ * Dos juegos porque el velo se compone sobre la superficie: los mismos porcentajes que en
+ * claro dan celdas casi idénticas sobre el fondo oscuro. Verificado: en claro la
+ * luminancia baja de forma monótona con la severidad y el texto rinde ≥ 5,1:1; en oscuro
+ * el texto rinde ≥ 7,8:1.
+ */
+:root {
+  --heat-1: 14%;
+  --heat-2: 26%;
+  --heat-3: 40%;
+  --heat-4: 50%;
+}
+
+[data-theme='dark'] {
+  --heat-1: 24%;
+  --heat-2: 36%;
+  --heat-3: 48%;
+  --heat-4: 62%;
 }
 
 @theme inline {
@@ -93,6 +321,22 @@
   --color-danger: var(--danger);
   --color-danger-subtle: var(--danger-subtle);
   --color-success: var(--success);
+  --color-phase: var(--phase-ink);
+  --color-phase-hover: var(--phase-ink-hover);
+  --color-phase-accent: var(--phase-accent);
+  --color-phase-subtle: var(--phase-subtle);
+  --color-phase-border: var(--phase-border);
+  --color-phase-on: var(--phase-on);
+  --color-tone-good: var(--tone-good);
+  --color-tone-neutral: var(--tone-neutral);
+  --color-tone-warn: var(--tone-warn);
+  --color-tone-bad: var(--tone-bad);
+  --color-tone-good-subtle: var(--tone-good-subtle);
+  --color-tone-neutral-subtle: var(--tone-neutral-subtle);
+  --color-tone-warn-subtle: var(--tone-warn-subtle);
+  --color-tone-bad-subtle: var(--tone-bad-subtle);
+  --color-diverge-cool: var(--diverge-cool);
+  --color-diverge-warm: var(--diverge-warm);
   --font-sans: var(--font-montserrat);
 }
 
@@ -131,5 +375,59 @@ body {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * El dashboard se presenta, y presentar todavía significa a menudo repartir un PDF. Esto
+ * es lo que hace que «Imprimir» produzca un documento y no una captura de una aplicación:
+ * fuera el chrome de navegación, fondo blanco, y ninguna tarjeta partida a la mitad por un
+ * salto de página.
+ */
+@media print {
+  /*
+   * El papel es blanco: el documento sale en claro aunque la pantalla esté en oscuro. Gana
+   * sobre el tema por especificidad, no por orden, porque `data-theme` está en el <html>.
+   */
+  :root,
+  :root[data-theme='dark'] {
+    color-scheme: light;
+
+    --background: #ffffff;
+    --surface: #ffffff;
+    --surface-muted: #f6f8fb;
+    --foreground: #1a1a1a;
+    --foreground-muted: #4a4a4d;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  header:has(nav[aria-label='Secciones del panel']) {
+    display: none;
+  }
+
+  /* Un interruptor de tema impreso en papel no lo puede pulsar nadie. */
+  [data-theme-toggle] {
+    display: none;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  section,
+  article,
+  table,
+  li {
+    break-inside: avoid;
+  }
+
+  /* Los colores de banda y de rampa son el dato, no decoración: deben salir impresos. */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

@@ -1,6 +1,6 @@
 import type { AspectMatrixRow, ThresholdBand } from '@/lib/admin.types';
 import { ASPECT_LABELS } from '@/lib/admin.types';
-import { classify, formatIndex, inkOn } from '@/lib/score-scale';
+import { classify, formatIndex, heatFill } from '@/lib/score-scale';
 import { EmptyState } from './InsufficientData';
 import { MatrixLegend } from './RelationshipMatrixView';
 
@@ -58,11 +58,8 @@ export function ScoreHeatmapGrid({
                   return (
                     <td key={key} className="p-0.5">
                       <div
-                        className="rounded px-2 py-2 text-center"
-                        style={{
-                          backgroundColor: band?.color ?? 'var(--surface-muted)',
-                          color: band ? inkOn(band.color) : 'var(--foreground-muted)',
-                        }}
+                        className="rounded px-2 py-2 text-center text-foreground"
+                        style={heatFill(band, bands)}
                         title={`${row.areaName} · ${ASPECT_LABELS[key]}: ${formatIndex(value, 1)} (${band?.label ?? 'sin dato'})`}
                       >
                         <span className="text-sm font-bold tabular-nums">

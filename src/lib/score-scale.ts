@@ -9,49 +9,6 @@ export function classify(
   return bands.find((band) => value >= band.minValue && value <= band.maxValue) ?? null;
 }
 
-/**
- * Tinta legible sobre un relleno de color.
- *
- * Los colores de estado son de luminancia muy distinta: el ámbar de "Aceptable" necesita
- * texto oscuro y el rojo de "Crítico" texto blanco. Elegir uno fijo dejaría una de las dos
- * bandas ilegible dentro de su propia celda.
- */
-export function inkOn(hex: string): string {
-  // El oscuro es el neutro de la línea gráfica del Manual de Marca, no un negro puro.
-  return relativeLuminance(hex) > 0.45 ? '#333333' : '#ffffff';
-}
-
-/** Relleno tenue para fondos de celda, manteniendo el texto en tinta normal. */
-export function tintOf(hex: string, alpha = 0.16): string {
-  const { r, g, b } = parseHex(hex);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function parseHex(hex: string): { r: number; g: number; b: number } {
-  const clean = hex.replace('#', '');
-  const full =
-    clean.length === 3
-      ? clean
-          .split('')
-          .map((char) => char + char)
-          .join('')
-      : clean;
-  return {
-    r: parseInt(full.slice(0, 2), 16),
-    g: parseInt(full.slice(2, 4), 16),
-    b: parseInt(full.slice(4, 6), 16),
-  };
-}
-
-function relativeLuminance(hex: string): number {
-  const { r, g, b } = parseHex(hex);
-  const channel = (value: number) => {
-    const scaled = value / 255;
-    return scaled <= 0.03928 ? scaled / 12.92 : ((scaled + 0.055) / 1.055) ** 2.4;
-  };
-  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-}
-
 /** Formatea un índice para tarjetas (entero) o tablas (un decimal). */
 export function formatIndex(value: number | null, decimals = 0): string {
   if (value === null) return '—';
@@ -74,4 +31,24 @@ export function formatDuration(seconds: number | null): string {
   const minutes = Math.floor(seconds / 60);
   const rest = seconds % 60;
   return minutes === 0 ? `${rest} s` : `${minutes} min ${String(rest).padStart(2, '0')} s`;
+}
+
+/**
+ * Relleno de una celda de matriz: un velo del color de banda, no el color a plena carga.
+ *
+ * La intensidad sube con la severidad, así que la cuadrícula se lee por manchas antes de
+ * leer un solo número. El texto se queda en tinta normal —no hay que calcular contraste
+ * contra cada relleno— y el número sigue siendo el dato: el color solo lo acompaña, que es
+ * lo que corresponde cuando las cuatro bandas no se distinguen entre sí por color a secas.
+ */
+export function heatFill(
+  band: ThresholdBand | null,
+  bands: ThresholdBand[],
+): { backgroundColor: string } {
+  if (!band) return { backgroundColor: 'var(--surface-muted)' };
+  const index = bands.findIndex((entry) => entry.label === band.label);
+  const step = Math.min(Math.max(index, 0), 3) + 1;
+  return {
+    backgroundColor: `color-mix(in srgb, ${band.color} var(--heat-${step}), transparent)`,
+  };
 }

@@ -2,8 +2,11 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { exportUrl, getResponses } from '@/lib/admin-client';
-import { formatDuration } from '@/lib/score-scale';
+import { exportUrl, getOverview, getResponses } from '@/lib/admin-client';
+import { collectionInsight } from '@/lib/insights';
+import { formatDuration, formatShare } from '@/lib/score-scale';
+import { Readout } from '@/components/charts/Readout';
+import { StatStrip } from '@/components/charts/StatStrip';
 import { EnvelopeGate, PanelSection } from '@/components/charts/PanelSection';
 
 const PAGE_SIZE = 50;
@@ -14,6 +17,8 @@ export default function RespuestasPage() {
     queryKey: ['responses', page],
     queryFn: () => getResponses(page, PAGE_SIZE),
   });
+  // El mismo corte que lee el dashboard: aquí contesta «¿ya se puede cerrar la campaña?».
+  const overview = useQuery({ queryKey: ['overview'], queryFn: () => getOverview() });
 
   return (
     <>
@@ -21,7 +26,7 @@ export default function RespuestasPage() {
         <div className="flex flex-col gap-1">
           <h1 className="text-lg text-foreground">Respuestas</h1>
           <p className="text-sm text-foreground-muted">
-            Encuestas completadas de la campaña activa.
+            Cómo va la recolección y el listado de lo recibido.
           </p>
         </div>
 
@@ -43,9 +48,55 @@ export default function RespuestasPage() {
         </div>
       </header>
 
+      <EnvelopeGate query={overview}>
+        {(data, meta) => (
+          <section className="flex flex-col gap-4 rounded-xl border border-border-subtle bg-surface p-5">
+            <StatStrip
+              items={[
+                {
+                  label: 'Completadas',
+                  value: String(data.completion.completed),
+                  hint: `de ${data.completion.started} iniciadas`,
+                },
+                {
+                  label: 'Participación',
+                  value:
+                    data.participation.rate === null
+                      ? '—'
+                      : formatShare(data.participation.rate),
+                  hint:
+                    data.participation.population === null
+                      ? 'Sin población registrada'
+                      : `de ${data.participation.population} personas`,
+                },
+                {
+                  label: 'Finalización',
+                  value:
+                    data.completion.rate === null ? '—' : formatShare(data.completion.rate),
+                  hint: 'de las que se abrieron',
+                },
+                {
+                  label: 'Duración mediana',
+                  value: formatDuration(data.medianDurationSeconds),
+                  hint: 'El instrumento estima 15 min',
+                },
+              ]}
+            />
+            <Readout
+              insight={collectionInsight(
+                data.participation,
+                data.completion,
+                meta.n,
+                meta.minCohortSize,
+              )}
+            />
+          </section>
+        )}
+      </EnvelopeGate>
+
       <PanelSection
         title="Listado"
-        description="El nombre y el cargo son opcionales en el instrumento: la mayoría de las filas puede venir sin identificar."
+        description="La encuesta es anónima: no se guarda el nombre. El área y el cargo son obligatorios y sirven para leer los resultados por proceso y por nivel."
       >
         <EnvelopeGate query={query}>
           {(data) => (
@@ -69,14 +120,16 @@ export default function RespuestasPage() {
                     {data.rows.map((row) => (
                       <tr key={row.id} className="border-b border-border-subtle">
                         <td className="py-2 text-foreground">
-                          {row.ownArea ?? '—'}
+                          {row.ownAreaName ?? row.ownArea ?? '—'}
                           {row.ownAreaOther && (
                             <span className="ml-1.5 text-xs text-foreground-muted">
                               ({row.ownAreaOther})
                             </span>
                           )}
                         </td>
-                        <td className="py-2 text-foreground-muted">{row.respondentRole ?? '—'}</td>
+                        <td className="py-2 text-foreground-muted">
+                          {row.respondentRoleLabel ?? row.respondentRole ?? '—'}
+                        </td>
                         <td className="py-2 text-foreground-muted">
                           {row.submittedAt
                             ? new Date(row.submittedAt).toLocaleString('es-CO')

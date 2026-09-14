@@ -2,9 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { getRelationshipMap } from '@/lib/admin-client';
-import { formatIndex } from '@/lib/score-scale';
+import { aspectsInsight, gapInsight, rankingInsight } from '@/lib/insights';
 import { useThresholds } from '@/lib/use-thresholds';
 import { BarRanking } from '@/components/charts/BarRanking';
+import { DivergingBars } from '@/components/charts/DivergingBars';
+import { Readout } from '@/components/charts/Readout';
 import { RelationshipMatrixView } from '@/components/charts/RelationshipMatrixView';
 import { ScoreHeatmapGrid } from '@/components/charts/ScoreHeatmapGrid';
 import { EnvelopeGate, PanelSection } from '@/components/charts/PanelSection';
@@ -21,8 +23,8 @@ export default function MapaPage() {
       <header className="flex flex-col gap-1">
         <h1 className="text-lg text-foreground">Mapa de relacionamiento</h1>
         <p className="text-sm text-foreground-muted">
-          Cómo se evalúan las áreas entre sí. Cada celda es el índice de relacionamiento que
-          el área de la fila otorga al área de la columna.
+          Cómo se evalúan las áreas entre sí. Cada celda es el índice que el área de la fila
+          le otorga al área de la columna.
         </p>
       </header>
 
@@ -30,16 +32,10 @@ export default function MapaPage() {
         {(data) => (
           <>
             <PanelSection
-              title="Matriz área evaluadora × área evaluada"
-              description="Lea una fila para ver cómo evalúa un área a las demás, o una columna para ver cómo la evalúan a ella."
+              title="Quién trabaja bien con quién"
+              description="Ranking del relacionamiento que cada área RECIBE de las demás. Es la lectura más directa del mapa: con quién cuesta trabajar."
             >
-              <RelationshipMatrixView payload={data} bands={bands} />
-            </PanelSection>
-
-            <PanelSection
-              title="Ranking de áreas por relacionamiento recibido"
-              description="Promedio del índice que cada área recibe de las demás."
-            >
+              <Readout insight={rankingInsight(data.ranking, data.suppressedRanking)} />
               <BarRanking
                 max={100}
                 bands={bands}
@@ -48,66 +44,43 @@ export default function MapaPage() {
                   key: row.areaCode,
                   label: row.areaName,
                   value: row.irel,
-                  hint: `${row.respondents} respuestas`,
+                  hint: `${row.respondents} ${row.respondents === 1 ? 'respuesta' : 'respuestas'}`,
                 }))}
                 emptyMessage="Ningún área alcanza todavía la cohorte mínima para publicarse."
               />
-              {data.suppressedRanking > 0 && (
-                <p className="mt-3 text-xs text-foreground-muted">
-                  {data.suppressedRanking}{' '}
-                  {data.suppressedRanking === 1 ? 'área oculta' : 'áreas ocultas'} por cohorte
-                  insuficiente.
-                </p>
-              )}
             </PanelSection>
 
             <PanelSection
-              title="Brecha de percepción"
-              description="Diferencia entre el relacionamiento que un área recibe y el que otorga. Una brecha positiva señala un área mejor evaluada de lo que evalúa; una negativa, un área exigente con las demás."
+              title="Quién exige más de lo que recibe"
+              description="Recibido menos otorgado, a los dos lados del cero. A la derecha, las áreas que califican a las demás por debajo de la nota que ellas reciben; a la izquierda, las que reparten mejores notas de las que les dan."
             >
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[520px] text-sm">
-                  <thead>
-                    <tr className="border-b border-border-subtle text-left">
-                      <th className="py-2 text-xs font-medium text-foreground-muted">Área</th>
-                      <th className="py-2 text-right text-xs font-medium text-foreground-muted">
-                        Recibe
-                      </th>
-                      <th className="py-2 text-right text-xs font-medium text-foreground-muted">
-                        Otorga
-                      </th>
-                      <th className="py-2 text-right text-xs font-medium text-foreground-muted">
-                        Brecha
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.gap.map((row) => (
-                      <tr key={row.areaCode} className="border-b border-border-subtle">
-                        <td className="py-2 text-foreground">{row.areaName}</td>
-                        <td className="py-2 text-right tabular-nums text-foreground">
-                          {formatIndex(row.received, 1)}
-                        </td>
-                        <td className="py-2 text-right tabular-nums text-foreground">
-                          {formatIndex(row.granted, 1)}
-                        </td>
-                        <td className="py-2 text-right font-medium tabular-nums text-foreground">
-                          {row.gap === null
-                            ? '—'
-                            : `${row.gap > 0 ? '+' : ''}${row.gap.toFixed(1)}`}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Readout insight={gapInsight(data.gap)} />
+              <DivergingBars
+                negativeLabel="Da mejor nota de la que recibe"
+                positiveLabel="Exige más de lo que le exigen"
+                rows={data.gap.map((row) => ({
+                  key: row.areaCode,
+                  label: row.areaName,
+                  value: row.gap,
+                  hint: `${row.areaName}: recibe ${row.received?.toFixed(1) ?? '—'}, otorga ${row.granted?.toFixed(1) ?? '—'}`,
+                }))}
+                emptyMessage="Ningún área tiene los dos lados de la brecha todavía."
+              />
             </PanelSection>
 
             <PanelSection
-              title="Aspectos de la red de colaboración"
-              description="Los cinco aspectos del componente 2 por área evaluada. Distingue un área que falla en comunicación de una que falla en cumplimiento."
+              title="En qué falla cada área"
+              description="Los cinco aspectos del componente 2 por área evaluada. Distingue un área que falla en comunicación de una que falla en cumplimiento — el índice agregado las promedia y borra esa diferencia."
             >
+              <Readout insight={aspectsInsight(data.aspects, bands)} />
               <ScoreHeatmapGrid rows={data.aspects} bands={bands} />
+            </PanelSection>
+
+            <PanelSection
+              title="La matriz completa, par a par"
+              description="Lea una fila para ver cómo evalúa un área a las demás, o una columna para ver cómo la evalúan a ella. Es el dato en bruto: lo de arriba son sus conclusiones."
+            >
+              <RelationshipMatrixView payload={data} bands={bands} />
             </PanelSection>
           </>
         )}

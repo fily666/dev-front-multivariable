@@ -1,6 +1,12 @@
 'use client';
 
-import { fieldName, type AnswerValue, type Question } from '@/lib/survey-schema.types';
+import {
+  PIVOT_QUESTION,
+  PRIMARY_AREA_QUESTION,
+  fieldName,
+  type AnswerValue,
+  type Question,
+} from '@/lib/survey-schema.types';
 import { QuestionRenderer } from './QuestionRenderer';
 import { QuestionBlock } from './StepShell';
 
@@ -14,7 +20,7 @@ interface ComponentStepProps {
   entries: StepEntry[];
   answers: Record<string, AnswerValue | undefined>;
   errors: Record<string, string>;
-  onChange: (key: string, value: AnswerValue) => void;
+  onChange: (key: string, value: AnswerValue | undefined) => void;
   disabled?: boolean;
 }
 
@@ -29,28 +35,52 @@ export function ComponentStep({
   onChange,
   disabled,
 }: ComponentStepProps) {
+  // La relación principal no se pinta como pregunta aparte: es una estrella sobre las
+  // áreas que se acaban de marcar en 1.1. Preguntarla en un bloque propio obligaría a
+  // releer la lista de 24 subprocesos para repetir una de las cinco ya elegidas.
+  const primaryEntry = entries.find(
+    (entry) => entry.question.code === PRIMARY_AREA_QUESTION,
+  );
+  const primaryKey = primaryEntry
+    ? fieldName(primaryEntry.question.code, primaryEntry.targetArea)
+    : null;
+  const primaryAnswer = primaryKey ? answers[primaryKey] : undefined;
+
+  const primary = primaryEntry && primaryKey
+    ? {
+        value: primaryAnswer?.kind === 'option' ? primaryAnswer.value : null,
+        onChange: (value: string | null) =>
+          onChange(primaryKey, value ? { kind: 'option', value } : undefined),
+        label: primaryEntry.question.label,
+        error: errors[primaryKey],
+      }
+    : undefined;
+
   return (
     <>
-      {entries.map(({ question, targetArea, areaName }) => {
-        const key = fieldName(question.code, targetArea);
-        return (
-          <QuestionBlock
-            key={key}
-            label={question.label}
-            helpText={question.helpText}
-            required={question.required}
-          >
-            <QuestionRenderer
-              question={question}
-              value={answers[key]}
-              error={errors[key]}
-              disabled={disabled}
-              areaContext={areaName ? { code: targetArea, name: areaName } : undefined}
-              onChange={(value) => onChange(key, value)}
-            />
-          </QuestionBlock>
-        );
-      })}
+      {entries
+        .filter((entry) => entry.question.code !== PRIMARY_AREA_QUESTION)
+        .map(({ question, targetArea, areaName }) => {
+          const key = fieldName(question.code, targetArea);
+          return (
+            <QuestionBlock
+              key={key}
+              label={question.label}
+              helpText={question.helpText}
+              required={question.required}
+            >
+              <QuestionRenderer
+                question={question}
+                value={answers[key]}
+                error={errors[key]}
+                disabled={disabled}
+                areaContext={areaName ? { code: targetArea, name: areaName } : undefined}
+                primary={question.code === PIVOT_QUESTION ? primary : undefined}
+                onChange={(value) => onChange(key, value)}
+              />
+            </QuestionBlock>
+          );
+        })}
     </>
   );
 }
@@ -95,7 +125,7 @@ export function ComponentStepPerAreaList({
                   const key = fieldName(question.code, targetArea);
                   return (
                     <div key={key} className="flex flex-col gap-2">
-                      <p className="text-sm font-medium text-brand">{areaName ?? targetArea}</p>
+                      <p className="text-sm font-medium text-phase">{areaName ?? targetArea}</p>
                       <QuestionRenderer
                         compact
                         question={question}

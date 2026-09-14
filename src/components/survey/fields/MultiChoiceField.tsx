@@ -1,6 +1,8 @@
 'use client';
 
+import type { QuestionOption } from '@/lib/survey-schema.types';
 import type { FieldProps } from './field.types';
+import { groupOptions, hasVisibleGroups } from './option-groups';
 
 export function MultiChoiceField({
   question,
@@ -8,6 +10,7 @@ export function MultiChoiceField({
   onChange,
   error,
   disabled,
+  primary,
 }: FieldProps) {
   const selected = value?.kind === 'options' ? value.values : [];
   const otherText = value?.kind === 'options' ? (value.otherText ?? '') : '';
@@ -42,65 +45,130 @@ export function MultiChoiceField({
       values: next,
       otherText: stillNeedsText ? otherText : undefined,
     });
+
+    // Desmarcar la que estaba señalada como principal deja la marca sin respaldo: se
+    // limpia aquí y no en el servidor, para que el encuestado lo vea al instante.
+    if (primary && alreadySelected && primary.value === optionValue) {
+      primary.onChange(null);
+    }
   }
 
   const textOption = question.options.find(
     (option) => option.allowsText && selected.includes(option.value),
   );
 
+  const groups = groupOptions(question.options);
+  const showHeadings = hasVisibleGroups(groups);
+
+  const renderOption = (option: QuestionOption) => {
+    const isSelected = selected.includes(option.value);
+    // Al llegar al tope solo se pueden desmarcar opciones, no añadir más.
+    const isBlocked = !isSelected && atLimit && !exclusiveValues.includes(option.value);
+    const isPrimary = primary?.value === option.value;
+
+    return (
+      <div key={option.value} className="flex items-stretch gap-2">
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={isSelected}
+          disabled={disabled || isBlocked}
+          onClick={() => toggle(option.value)}
+          className={[
+            'flex flex-1 items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors',
+            'disabled:cursor-not-allowed disabled:opacity-40',
+            isSelected
+              ? 'border-phase bg-phase-subtle text-foreground'
+              : 'border-border-subtle bg-surface text-foreground hover:border-phase',
+          ].join(' ')}
+        >
+          <span
+            aria-hidden
+            className={[
+              'flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 text-phase-on',
+              isSelected ? 'border-phase bg-phase' : 'border-border-strong',
+            ].join(' ')}
+          >
+            {isSelected && (
+              <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" aria-hidden>
+                <path
+                  d="M2.5 6.2 4.8 8.5 9.5 3.8"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </span>
+          {option.label}
+        </button>
+
+        {primary && isSelected && (
+          <button
+            type="button"
+            aria-pressed={isPrimary}
+            disabled={disabled}
+            onClick={() => primary.onChange(isPrimary ? null : option.value)}
+            title={primary.label}
+            className={[
+              'flex shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors',
+              'disabled:cursor-not-allowed disabled:opacity-50',
+              isPrimary
+                ? 'border-phase bg-phase text-phase-on'
+                : 'border-border-subtle bg-surface text-foreground-muted hover:border-phase hover:text-phase',
+            ].join(' ')}
+          >
+            <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" aria-hidden>
+              <path
+                d="M10 2.5 12.2 7l5 .7-3.6 3.5.9 5-4.5-2.4L5.5 16.2l.9-5L2.8 7.7l5-.7z"
+                fill={isPrimary ? 'currentColor' : 'none'}
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span className="hidden sm:inline">
+              {isPrimary ? 'Principal' : 'Marcar'}
+            </span>
+            <span className="sr-only">
+              {isPrimary
+                ? `${option.label} está marcada como su relación principal`
+                : `Marcar ${option.label} como su relación principal`}
+            </span>
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-2" aria-invalid={error ? true : undefined}>
-        {question.options.map((option) => {
-          const isSelected = selected.includes(option.value);
-          // Al llegar al tope solo se pueden desmarcar opciones, no añadir más.
-          const isBlocked =
-            !isSelected && atLimit && !exclusiveValues.includes(option.value);
-
-          return (
-            <button
-              key={option.value}
-              type="button"
-              role="checkbox"
-              aria-checked={isSelected}
-              disabled={disabled || isBlocked}
-              onClick={() => toggle(option.value)}
-              className={[
-                'flex items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors',
-                'disabled:cursor-not-allowed disabled:opacity-40',
-                isSelected
-                  ? 'border-brand bg-brand-subtle text-foreground'
-                  : 'border-border-subtle bg-surface text-foreground hover:border-brand',
-              ].join(' ')}
-            >
-              <span
-                aria-hidden
-                className={[
-                  'flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 text-white',
-                  isSelected ? 'border-brand bg-brand' : 'border-border-strong',
-                ].join(' ')}
-              >
-                {isSelected && (
-                  <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" aria-hidden>
-                    <path
-                      d="M2.5 6.2 4.8 8.5 9.5 3.8"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                )}
-              </span>
-              {option.label}
-            </button>
-          );
-        })}
+      <div className="flex flex-col gap-4" aria-invalid={error ? true : undefined}>
+        {groups.map((group, index) => (
+          <div key={group.code ?? `sueltas-${index}`} className="flex flex-col gap-2">
+            {showHeadings && group.label && (
+              <p className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
+                {group.label}
+              </p>
+            )}
+            {group.options.map(renderOption)}
+          </div>
+        ))}
       </div>
 
       {question.maxSelect != null && (
         <p className="text-xs text-foreground-muted" aria-live="polite">
           {selected.length} de {question.maxSelect} seleccionadas
+        </p>
+      )}
+
+      {primary && (
+        <p
+          className={primary.error ? 'text-sm text-danger' : 'text-xs text-foreground-muted'}
+          role={primary.error ? 'alert' : undefined}
+        >
+          {primary.error ?? primary.label}
         </p>
       )}
 

@@ -9,6 +9,18 @@ export interface Area {
   code: string;
   name: string;
   isEvaluable: boolean;
+  /** Gestión a la que pertenece el subproceso. */
+  procesoCode: string | null;
+}
+
+export interface Proceso {
+  code: string;
+  name: string;
+}
+
+export interface RespondentRole {
+  value: string;
+  label: string;
 }
 
 export interface QuestionOption {
@@ -16,6 +28,8 @@ export interface QuestionOption {
   label: string;
   allowsText: boolean;
   exclusive: boolean;
+  /** Gestión bajo la que se agrupa la opción. `null` = opción suelta. */
+  group: { code: string; label: string } | null;
 }
 
 export interface Question {
@@ -44,19 +58,33 @@ export interface SurveyComponent {
 export interface SurveySchema {
   campaign: { id: string; name: string; isOpen: boolean };
   areas: Area[];
+  procesos: Proceso[];
+  roles: RespondentRole[];
   components: SurveyComponent[];
   settings: {
     maxAreasInteraccion: number;
-    requireIdentity: boolean;
   };
 }
+
+/** Identificación previa a la encuesta. Ambos campos son obligatorios. */
+export interface Identity {
+  ownArea: string;
+  respondentRole: string;
+}
+
+export const EMPTY_IDENTITY: Identity = { ownArea: '', respondentRole: '' };
 
 /** El centinela que el back usa para las respuestas globales. */
 export const GLOBAL_AREA_CODE = '__GLOBAL__';
 
 /** Códigos de pregunta con significado especial para el flujo del wizard. */
-export const OWN_AREA_QUESTION = 'c1_area_propia';
 export const PIVOT_QUESTION = 'c1_areas_interaccion';
+/**
+ * La marcación especial del área con la que más se relaciona. No se pinta como pregunta
+ * aparte: viaja dentro del selector de áreas de 1.1, porque marcar "la principal" solo
+ * tiene sentido mirando la lista que se acaba de elegir.
+ */
+export const PRIMARY_AREA_QUESTION = 'c1_area_principal';
 export const OTHER_OPTION_VALUES = ['OTRA', 'OTRO'];
 
 /**
@@ -100,7 +128,7 @@ export interface DraftResult {
   responseId: string;
   status: 'DRAFT' | 'COMPLETED';
   lastStep: number;
-  respondentName: string | null;
+  ownArea: string | null;
   respondentRole: string | null;
   answers: StoredAnswer[];
 }

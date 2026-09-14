@@ -16,10 +16,12 @@ import {
   submitSurvey,
   toPayload,
 } from '@/lib/survey-client';
-import { validateStep } from '@/lib/zod-schema-builder';
+import { validateIdentity, validateStep } from '@/lib/zod-schema-builder';
 import {
+  EMPTY_IDENTITY,
   fieldName,
   type AnswerValue,
+  type Identity,
   type MissingItem,
   type RuleViolation,
   type SurveySchema,
@@ -51,7 +53,8 @@ export interface WizardState {
   busy: boolean;
   submitted: boolean;
   remainingMinutes: number | null;
-  identity: { respondentName: string; respondentRole: string };
+  identity: Identity;
+  identityErrors: Record<string, string>;
 }
 
 export function useSurveyWizard() {
@@ -67,7 +70,15 @@ export function useSurveyWizard() {
   const [stepError, setStepError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [identity, setIdentity] = useState({ respondentName: '', respondentRole: '' });
+  const [identity, setIdentity] = useState<Identity>(EMPTY_IDENTITY);
+  const [identityErrors, setIdentityErrors] = useState<Record<string, string>>({});
+
+  /**
+   * Hay respuestas escritas en este paso que todavía no viajaron al borrador. El borrador
+   * se guarda al pasar de pantalla, así que cerrar la pestaña a media pantalla pierde solo
+   * esa pantalla — poco, pero suficiente para que alguien no vuelva.
+   */
+  const [dirty, setDirty] = useState(false);
 
   /** Duración de los pasos ya completados, para estimar lo que falta. */
   const [stepDurations, setStepDurations] = useState<number[]>([]);
@@ -76,6 +87,18 @@ export function useSurveyWizard() {
   useEffect(() => {
     stepStartedAt.current = Date.now();
   }, [stepIndex]);
+
+  /*
+   * El navegador pregunta antes de cerrar si queda algo sin guardar. Solo se arma cuando
+   * de verdad hay algo que perder: un aviso que salta siempre se aprende a ignorar.
+   */
+  useEffect(() => {
+    if (!dirty || submitted) return;
+
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty, submitted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,8 +167,17 @@ export function useSurveyWizard() {
     return Math.max(1, Math.round((remaining * perStepMs) / 60_000));
   }, [steps.length, stepIndex, stepDurations]);
 
-  const setAnswer = useCallback((key: string, value: AnswerValue) => {
-    setAnswers((previous) => ({ ...previous, [key]: value }));
+  const setAnswer = useCallback((key: string, value: AnswerValue | undefined) => {
+    setDirty(true);
+    setAnswers((previous) => {
+      if (value === undefined) {
+        if (!(key in previous)) return previous;
+        const next = { ...previous };
+        delete next[key];
+        return next;
+      }
+      return { ...previous, [key]: value };
+    });
     setErrors((previous) => {
       if (!previous[key]) return previous;
       const next = { ...previous };
@@ -154,8 +186,30 @@ export function useSurveyWizard() {
     });
   }, []);
 
+  /**
+   * Comprueba la identificación contra el catálogo. Devuelve `true` si está completa; el
+   * servidor la vuelve a exigir al enviar, así que esto solo evita el viaje de ida.
+   */
+  const checkIdentity = useCallback(() => {
+    if (!schema) return false;
+    const problems = validateIdentity(
+      identity,
+      schema.areas.filter((area) => area.isEvaluable).map((area) => area.code),
+      schema.roles.map((role) => role.value),
+    );
+    setIdentityErrors(problems);
+    if (Object.keys(problems).length > 0) {
+      setStepError('Indique su área y su cargo para continuar.');
+      return false;
+    }
+    setStepError(null);
+    return true;
+  }, [schema, identity]);
+
   /** Abre un borrador nuevo. */
   const begin = useCallback(async () => {
+    if (!checkIdentity()) return;
+
     setBusy(true);
     setStepError(null);
     try {
@@ -173,7 +227,7 @@ export function useSurveyWizard() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [checkIdentity]);
 
   /** Retoma el borrador guardado en este navegador. */
   const resume = useCallback(async () => {
@@ -209,7 +263,7 @@ export function useSurveyWizard() {
       setDraftToken(pointer.draftToken);
       setAnswers(restored);
       setIdentity({
-        respondentName: draft.respondentName ?? '',
+        ownArea: draft.ownArea ?? '',
         respondentRole: draft.respondentRole ?? '',
       });
       setStarted(true);
@@ -237,6 +291,14 @@ export function useSurveyWizard() {
 
   const goToComponent = useCallback(
     (componentId: number) => {
+      // El componente 0 es la identificación, que no es un paso del instrumento sino la
+      // bienvenida. Es la misma convención que usa el back al reportar faltantes.
+      if (componentId === 0) {
+        setStepIndex(0);
+        setStepError(null);
+        return;
+      }
+
       const target = steps.findIndex(
         (step) => step.kind === 'component' && step.componentId === componentId,
       );
@@ -262,6 +324,25 @@ export function useSurveyWizard() {
       if (error instanceof ApiError && error.isValidationError) {
         const body = error.body as { missing?: MissingItem[] } | undefined;
         const missing = body?.missing ?? [];
+
+        // El componente 0 es la identificación, que vive en el paso de bienvenida.
+        const identityMissing = missing.filter((item) => item.componentId === 0);
+        if (identityMissing.length > 0) {
+          setIdentityErrors(
+            Object.fromEntries(
+              identityMissing.map((item) => [
+                item.questionCode,
+                item.questionCode === 'ownArea'
+                  ? 'Indique a qué área pertenece.'
+                  : 'Indique su cargo.',
+              ]),
+            ),
+          );
+          setStepIndex(0);
+          setStepError('Falta la identificación: indique su área y su cargo.');
+          return;
+        }
+
         if (missing.length > 0) {
           const fieldErrors: Record<string, string> = {};
           for (const item of missing) {
@@ -287,10 +368,7 @@ export function useSurveyWizard() {
     if (!schema || !currentStep) return;
 
     if (currentStep.kind === 'welcome') {
-      if (schema.settings.requireIdentity && identity.respondentName.trim().length === 0) {
-        setStepError('El nombre es obligatorio en esta campaña.');
-        return;
-      }
+      if (!checkIdentity()) return;
       setStepIndex((index) => index + 1);
       return;
     }
@@ -330,12 +408,15 @@ export function useSurveyWizard() {
         ),
       );
 
+      // La identificación viaja con cada paso: es el único canal que tiene el borrador
+      // para recibirla, y reenviarla es idempotente.
       await saveStep(draftToken, currentStep.componentId, payloads, {
-        respondentName: identity.respondentName || undefined,
+        ownArea: identity.ownArea || undefined,
         respondentRole: identity.respondentRole || undefined,
       });
 
       saveDraftPointer(draftToken, currentStep.componentId);
+      setDirty(false);
       const elapsed = Date.now() - stepStartedAt.current;
       setStepDurations((previous) => [...previous, elapsed]);
       setErrors({});
@@ -345,7 +426,16 @@ export function useSurveyWizard() {
     } finally {
       setBusy(false);
     }
-  }, [schema, currentStep, currentEntries, answers, draftToken, identity, finish]);
+  }, [
+    schema,
+    currentStep,
+    currentEntries,
+    answers,
+    draftToken,
+    identity,
+    checkIdentity,
+    finish,
+  ]);
 
 
   return {
@@ -364,6 +454,7 @@ export function useSurveyWizard() {
       submitted,
       remainingMinutes,
       identity,
+      identityErrors,
     } satisfies WizardState,
     currentStep,
     currentComponent,

@@ -29,22 +29,28 @@ export function RadarIndices({ points }: { points: RadarPoint[] }) {
   }));
 
   return (
-    <div className="h-80 w-full">
+    <div className="h-88 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <RadarChart data={data} outerRadius="72%">
+        {/* Márgenes generosos y radio corto: con ocho ejes, «Servicio interno» y
+            «Relacionamiento» se salían del contenedor y quedaban cortados. */}
+        <RadarChart
+          data={data}
+          outerRadius="62%"
+          margin={{ top: 16, right: 72, bottom: 16, left: 72 }}
+        >
           <PolarGrid stroke="var(--border)" />
           <PolarAngleAxis
             dataKey="label"
             tick={{ fill: 'var(--foreground-muted)', fontSize: 11 }}
           />
           {/* Escala fija 0-100: dejarla automática haría que dos cortes distintos no se
-              puedan comparar visualmente. */}
-          <PolarRadiusAxis
-            domain={[0, 100]}
-            tickCount={5}
-            tick={{ fill: 'var(--foreground-muted)', fontSize: 10 }}
-            axisLine={false}
-          />
+              puedan comparar visualmente.
+
+              Sin números en el eje: caían diagonalmente sobre la silueta y chocaban con
+              las etiquetas. Los anillos de la retícula siguen marcando 0-25-50-75-100, el
+              valor exacto está en el tooltip, y al lado hay una lista con las ocho cifras
+              escritas — así que ningún dato depende solo de pasar el cursor. */}
+          <PolarRadiusAxis domain={[0, 100]} tickCount={5} tick={false} axisLine={false} />
           <Radar
             dataKey="value"
             stroke={SERIES_COLOR}

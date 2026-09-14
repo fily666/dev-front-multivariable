@@ -1,11 +1,18 @@
 import Link from 'next/link';
 import { LinkticLogo } from '@/components/brand/Logo';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 export const metadata = { title: 'Gracias · Diagnóstico Organizacional LinkTIC' };
 
 export default function GraciasPage() {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 px-5 py-16 sm:px-8">
+    <main className="relative mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 px-5 py-16 sm:px-8">
+      {/* Anclado y no en el flujo: el contenido va centrado en vertical y una fila más lo
+          descentraría. */}
+      <div className="absolute top-5 right-5 sm:right-8">
+        <ThemeToggle />
+      </div>
+
       <LinkticLogo width={180} priority />
 
       <h1 className="text-2xl text-foreground sm:text-3xl">

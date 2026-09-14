@@ -121,14 +121,35 @@ export function validateStep(
   return errors;
 }
 
-/** Schema Zod de los campos de identidad del paso de bienvenida. */
-export function buildIdentitySchema(required: boolean) {
-  const name = required
-    ? z.string().trim().min(1, 'Indique su nombre.').max(120)
-    : z.string().trim().max(120).optional();
-
+/**
+ * Schema Zod de la identificación. Área y cargo son obligatorios: sin área no hay fila
+ * en el mapa de relacionamiento y sin cargo no hay corte por nivel. La encuesta sigue
+ * siendo anónima — no se pide el nombre.
+ */
+export function buildIdentitySchema(areaCodes: string[], roleValues: string[]) {
   return z.object({
-    respondentName: name,
-    respondentRole: z.string().trim().max(120).optional(),
+    ownArea: z
+      .string()
+      .refine((code) => areaCodes.includes(code), 'Indique a qué área pertenece.'),
+    respondentRole: z
+      .string()
+      .refine((role) => roleValues.includes(role), 'Indique su cargo.'),
   });
+}
+
+/** Errores por campo de la identificación, en la forma que usa el paso de bienvenida. */
+export function validateIdentity(
+  identity: { ownArea: string; respondentRole: string },
+  areaCodes: string[],
+  roleValues: string[],
+): Record<string, string> {
+  const result = buildIdentitySchema(areaCodes, roleValues).safeParse(identity);
+  if (result.success) return {};
+
+  const errors: Record<string, string> = {};
+  for (const issue of result.error.issues) {
+    const field = String(issue.path[0]);
+    errors[field] ??= issue.message;
+  }
+  return errors;
 }

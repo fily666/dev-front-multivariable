@@ -6,6 +6,12 @@ export interface BarRow {
   key: string;
   label: string;
   value: number | null;
+  /**
+   * Número a mostrar cuando NO coincide con el que dibuja la barra. Lo necesita el NPS:
+   * la barra tiene que medir sobre una escala 0-100 porque no puede dibujar un valor
+   * negativo, pero el número que se lee debe ser el NPS real, de −100 a +100.
+   */
+  display?: string;
   /** Texto secundario, p. ej. el número de respuestas que sostienen la fila. */
   hint?: string;
 }
@@ -57,8 +63,12 @@ export function BarRanking({ rows, bands, max, emptyMessage, suffix, href }: Pro
               )}
               <span className="flex shrink-0 items-baseline gap-2">
                 <span className="text-sm font-bold tabular-nums text-foreground">
-                  {formatIndex(row.value, suffix === '%' ? 1 : 0)}
-                  {suffix}
+                  {row.display ?? (
+                    <>
+                      {formatIndex(row.value, suffix === '%' ? 1 : 0)}
+                      {suffix}
+                    </>
+                  )}
                 </span>
                 {band && <span className="text-xs text-foreground-muted">{band.label}</span>}
               </span>

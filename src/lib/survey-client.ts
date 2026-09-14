@@ -4,6 +4,7 @@ import {
   type AnswerPayload,
   type AnswerValue,
   type DraftResult,
+  type Identity,
   type Question,
   type StartResponseResult,
   type StoredAnswer,
@@ -22,7 +23,7 @@ export const saveStep = (
   draftToken: string,
   componentId: number,
   answers: AnswerPayload[],
-  identity?: { respondentName?: string; respondentRole?: string },
+  identity?: Partial<Identity>,
 ) =>
   apiFetch<{ saved: number; componentId: number }>(
     `/responses/${draftToken}/step/${componentId}`,

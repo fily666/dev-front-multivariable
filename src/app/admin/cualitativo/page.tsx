@@ -3,7 +3,16 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getQualitative, updateTheme } from '@/lib/admin-client';
+import {
+  barriersInsight,
+  motivesInsight,
+  openAnswersInsight,
+  strengthenInsight,
+} from '@/lib/insights';
+import { useAreaNames } from '@/lib/use-area-names';
 import { BarRanking } from '@/components/charts/BarRanking';
+import { OpposedBars } from '@/components/charts/OpposedBars';
+import { Readout } from '@/components/charts/Readout';
 import { EmptyState } from '@/components/charts/InsufficientData';
 import { EnvelopeGate, PanelSection } from '@/components/charts/PanelSection';
 import type { CountedOption, OpenAnswer } from '@/lib/admin.types';
@@ -14,68 +23,67 @@ export default function CualitativoPage() {
   return (
     <>
       <header className="flex flex-col gap-1">
-        <h1 className="text-lg text-foreground">
-          Oportunidades de transformación
-        </h1>
+        <h1 className="text-lg text-foreground">Oportunidades de transformación</h1>
         <p className="text-sm text-foreground-muted">
-          Barreras, reprocesos y las respuestas abiertas del instrumento.
+          Lo que la gente señala como el problema, con sus propias palabras y con las
+          opciones que marcó.
         </p>
       </header>
 
       <EnvelopeGate query={query}>
-        {(data) => (
+        {(data, meta) => (
           <>
             <PanelSection
-              title="Mayores obstáculos para trabajar entre áreas"
-              description="Selección múltiple: los porcentajes se calculan sobre encuestados, así que suman más de 100."
+              title="Qué frena el trabajo entre áreas"
+              description="Selección múltiple: los porcentajes son sobre encuestados, así que suman más de 100. Lo que importa es la distancia entre el primero y el segundo, no el valor absoluto."
             >
+              <Readout insight={barriersInsight(data.barriers)} />
               <BarRanking rows={toRows(data.barriers)} suffix="%" max={100} />
             </PanelSection>
 
+            <PanelSection
+              title="Por qué recomiendan y por qué no"
+              description="Los motivos del NPS, enfrentados en lugar de en dos listas: así se ve de una vez si un mismo motivo pesa en los dos lados."
+            >
+              <Readout insight={motivesInsight(data.npsMotives)} />
+              <OpposedBars
+                promoters={data.npsMotives.promoters}
+                detractors={data.npsMotives.detractors}
+              />
+            </PanelSection>
+
             <div className="grid gap-6 lg:grid-cols-2">
-              <PanelSection title="Procesos que generan más reprocesos">
-                <BarRanking rows={toRows(data.reworkProcesses)} suffix="%" max={100} />
+              <PanelSection
+                title="Procesos que generan más reprocesos"
+                description="Marcado sobre la gestión completa, no sobre el subproceso."
+              >
+                <BarRanking
+                  rows={toRows(data.reworkProcesses)}
+                  suffix="%"
+                  max={100}
+                  emptyMessage="Nadie ha señalado un proceso todavía."
+                />
               </PanelSection>
 
-              <PanelSection title="Áreas que necesitan fortalecer su relacionamiento">
-                <BarRanking rows={toRows(data.areasToStrengthen)} suffix="%" max={100} />
+              <PanelSection
+                title="Áreas que piden fortalecer"
+                description="Es una petición de más relación, no una queja de desempeño."
+              >
+                <Readout insight={strengthenInsight(data.areasToStrengthen)} compact />
+                <BarRanking
+                  rows={toRows(data.areasToStrengthen)}
+                  suffix="%"
+                  max={100}
+                  emptyMessage="Nadie ha señalado un área todavía."
+                />
               </PanelSection>
             </div>
 
             <PanelSection
-              title="Motivos del NPS"
-              description="Separados por segmento. Un mismo motivo puede aparecer en ambos lados, y ahí está la lectura interesante."
-            >
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="flex flex-col gap-3">
-                  <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                    Promotores
-                  </h3>
-                  <BarRanking
-                    rows={toRows(data.npsMotives.promoters)}
-                    suffix="%"
-                    max={100}
-                    emptyMessage="Sin motivos de promotores todavía."
-                  />
-                </div>
-                <div className="flex flex-col gap-3">
-                  <h3 className="text-xs font-medium uppercase tracking-wide text-foreground-muted">
-                    Detractores
-                  </h3>
-                  <BarRanking
-                    rows={toRows(data.npsMotives.detractors)}
-                    suffix="%"
-                    max={100}
-                    emptyMessage="Sin motivos de detractores todavía."
-                  />
-                </div>
-              </div>
-            </PanelSection>
-
-            <PanelSection
               title="Si pudiera cambiar una sola cosa"
-              description="Respuestas abiertas. Asigne un tema para poder agruparlas; la clasificación es manual y queda auditada."
+              description="Lo único del instrumento donde el encuestado escribe con sus palabras. Asigne un tema para poder contarlas junto a las preguntas cerradas; la clasificación es manual y queda auditada."
             >
+              <Readout insight={openAnswersInsight(data.openAnswers, meta.n)} />
               <OpenAnswersList answers={data.openAnswers} />
             </PanelSection>
           </>
@@ -96,6 +104,7 @@ function toRows(options: CountedOption[]) {
 
 function OpenAnswersList({ answers }: { answers: OpenAnswer[] }) {
   const queryClient = useQueryClient();
+  const nombreDe = useAreaNames();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
 
   const mutation = useMutation({
@@ -122,7 +131,7 @@ function OpenAnswersList({ answers }: { answers: OpenAnswer[] }) {
             <p className="text-sm leading-relaxed text-foreground">{answer.text}</p>
 
             <div className="flex flex-wrap items-center gap-3 text-xs text-foreground-muted">
-              <span>{answer.ownArea ?? 'Área sin declarar'}</span>
+              <span>{answer.ownArea ? nombreDe(answer.ownArea) : 'Área sin declarar'}</span>
               {answer.submittedAt && (
                 <span>{new Date(answer.submittedAt).toLocaleDateString('es-CO')}</span>
               )}

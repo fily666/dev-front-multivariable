@@ -1,7 +1,7 @@
 'use client';
 
 import type { RelationshipPayload, ThresholdBand } from '@/lib/admin.types';
-import { classify, formatIndex, inkOn } from '@/lib/score-scale';
+import { classify, formatIndex, heatFill } from '@/lib/score-scale';
 import { EmptyState } from './InsufficientData';
 
 interface Props {
@@ -22,8 +22,17 @@ export function RelationshipMatrixView({ payload, bands }: Props) {
   const areas = map.areas;
 
   if (map.cells.length === 0) {
+    // «No hay evaluaciones» y «las hay pero están todas ocultas» son cosas distintas, y
+    // con 24 subprocesos la segunda es la normal: 552 pares posibles contra una cohorte
+    // mínima de 4 deja casi todas las celdas por debajo del umbral.
     return (
-      <EmptyState message="Todavía no hay evaluaciones entre áreas suficientes para construir la matriz." />
+      <EmptyState
+        message={
+          suppressedCells > 0
+            ? `Las ${suppressedCells} relaciones evaluadas están ocultas: ninguna pareja de áreas alcanza todavía la cohorte mínima. Con 24 subprocesos hay 552 parejas posibles, así que este corte se lee mejor por gestión que par a par.`
+            : 'Todavía no hay evaluaciones entre áreas para construir la matriz.'
+        }
+      />
     );
   }
 
@@ -98,14 +107,11 @@ export function RelationshipMatrixView({ payload, bands }: Props) {
 
                   return (
                     <td key={target.code} className="p-0.5">
-                      {/* La tinta se calcula contra el relleno: el ámbar necesita texto
-                          oscuro y el rojo texto blanco. */}
+                      {/* Velo del color de banda, no el color a plena carga: con 24 áreas
+                          la cuadrícula entera en bloques saturados se vuelve ilegible. */}
                       <div
-                        className="rounded px-2 py-2 text-center"
-                        style={{
-                          backgroundColor: band?.color ?? 'var(--surface-muted)',
-                          color: band ? inkOn(band.color) : 'var(--foreground)',
-                        }}
+                        className="rounded px-2 py-2 text-center text-foreground"
+                        style={heatFill(band, bands)}
                         title={`${source.name} evalúa a ${target.name}: ${formatIndex(cell.irel, 1)} (${band?.label ?? 'sin banda'}) · ${cell.respondents} respuestas`}
                       >
                         <span className="text-sm font-bold tabular-nums">

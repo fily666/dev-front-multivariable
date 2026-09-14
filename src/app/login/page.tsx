@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { LinkticLogo } from '@/components/brand/Logo';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { ApiError } from '@/lib/api';
 import { login } from '@/lib/admin-client';
 
@@ -64,7 +65,12 @@ function LoginForm() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-7 px-5 py-16">
+    <main className="relative mx-auto flex w-full max-w-sm flex-1 flex-col justify-center gap-7 px-5 py-16">
+      {/* Anclado y no en el flujo: el formulario va centrado en vertical. */}
+      <div className="absolute top-5 right-5">
+        <ThemeToggle />
+      </div>
+
       <header className="flex flex-col gap-5">
         <LinkticLogo width={180} priority />
         <div className="flex flex-col gap-2">

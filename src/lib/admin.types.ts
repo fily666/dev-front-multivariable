@@ -164,9 +164,10 @@ export interface ResponsesPayload {
   rows: {
     id: string;
     ownArea: string | null;
+    ownAreaName: string | null;
     ownAreaOther: string | null;
-    respondentName: string | null;
     respondentRole: string | null;
+    respondentRoleLabel: string | null;
     submittedAt: string | null;
     durationSeconds: number | null;
     answerCount: number;
