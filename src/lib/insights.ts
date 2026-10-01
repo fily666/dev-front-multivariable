@@ -279,24 +279,36 @@ export function collectionInsight(
 
 // ---------------------------------------------------------------- tiempos
 
+/** Opción de C5.1 que queda fuera de la escala de cumplimiento: no opina sobre el ANS. */
+export const RESPONSE_TIME_OUT_OF_SCALE = 'NO_CONOCE_ANS';
+
 export function responseTimeInsight(rows: DistributionRow[]): Insight {
   const total = rows.reduce((sum, row) => sum + row.count, 0);
-  if (total === 0) return { tone: 'neutral', headline: 'Sin datos de tiempo de respuesta.' };
+  if (total === 0) return { tone: 'neutral', headline: 'Sin datos de cumplimiento del ANS.' };
 
-  const RAPIDO = new Set(['MENOS_2H', 'MISMO_DIA']);
-  const LENTO = new Set(['MAS_3_DIAS']);
-  const rapido = rows.filter((row) => RAPIDO.has(row.value)).reduce((s, r) => s + r.share, 0);
-  const lento = rows.filter((row) => LENTO.has(row.value)).reduce((s, r) => s + r.share, 0);
+  const shareOf = (values: string[]) =>
+    rows.filter((row) => values.includes(row.value)).reduce((s, r) => s + r.share, 0);
 
-  const tone: Tone = lento >= 25 ? 'bad' : lento >= 15 ? 'warn' : rapido >= 60 ? 'good' : 'neutral';
+  const cumple = shareOf(['SUPERA_ANS', 'CUMPLE_ANS']);
+  const noCumple = shareOf(['NO_CUMPLE_ANS']);
+  const desconoce = shareOf([RESPONSE_TIME_OUT_OF_SCALE]);
+
+  const tone: Tone =
+    noCumple >= 25 ? 'bad' : noCumple >= 15 || desconoce >= 30 ? 'warn' : cumple >= 60 ? 'good' : 'neutral';
+
+  // Que mucha gente no conozca el ANS es un hallazgo por sí mismo: no se puede cumplir, ni
+  // exigir, un acuerdo que nadie conoce.
+  const headline =
+    noCumple >= 15
+      ? `A ${nf(noCumple, 0)}% no le cumplen el ANS: ahí se pierde la agilidad.`
+      : desconoce >= 30
+        ? `${nf(desconoce, 0)}% no conoce el ANS de sus solicitudes: antes que cumplirlo, hay que darlo a conocer.`
+        : `${nf(cumple, 0)}% recibe respuesta dentro del ANS o antes.`;
 
   return {
     tone,
-    headline:
-      lento >= 15
-        ? `A ${nf(lento, 0)}% le responden en más de tres días: ahí se pierde la agilidad.`
-        : `${nf(rapido, 0)}% recibe respuesta el mismo día o antes.`,
-    detail: `${nf(rapido, 0)}% el mismo día o antes · ${nf(lento, 0)}% más de tres días.`,
+    headline,
+    detail: `${nf(cumple, 0)}% cumple o supera el ANS · ${nf(noCumple, 0)}% no lo cumple · ${nf(desconoce, 0)}% no lo conoce o no aplica.`,
   };
 }
 

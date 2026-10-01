@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { getComponents, getIndicesByArea } from '@/lib/admin-client';
 import {
+  RESPONSE_TIME_OUT_OF_SCALE,
   byAreaInsight,
   innovationInsight,
   responseTimeInsight,
@@ -80,11 +81,15 @@ export default function ComponentesPage() {
             </PanelSection>
 
             <PanelSection
-              title="Cuánto tardan en responderle a uno"
-              description="Los tramos conservan su orden natural, incluidos los que están en cero: un hueco en la distribución también dice algo. Alimenta el Índice de Agilidad."
+              title="Si le responden dentro del ANS"
+              description="Las opciones conservan su orden, de supera a no cumple, incluidas las que están en cero: un hueco en la distribución también dice algo. Alimenta el Índice de Agilidad; «No conoce el ANS / No aplica» va en gris y no puntúa."
             >
               <Readout insight={responseTimeInsight(data.responseTimes)} />
-              <OrdinalBars rows={data.responseTimes} />
+              <OrdinalBars
+                rows={data.responseTimes}
+                outOfScale={[RESPONSE_TIME_OUT_OF_SCALE]}
+                emptyMessage="Aún no hay respuestas con la pregunta del ANS."
+              />
             </PanelSection>
 
             <PanelSection

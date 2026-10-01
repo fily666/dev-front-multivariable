@@ -62,28 +62,39 @@ export function toPayload(
   }
 }
 
-/** Reconstruye el valor del formulario a partir de lo que devolvió el borrador. */
+/**
+ * Reconstruye el valor del formulario a partir de lo que devolvió el borrador.
+ *
+ * Las opciones que ya no están en el catálogo se descartan: un borrador guardado antes de
+ * cambiar una pregunta traería un valor que ningún botón muestra marcado, el paso lo daría
+ * por respondido y el envío lo rechazaría al final. Descartado, la pregunta vuelve a
+ * pedirse donde corresponde.
+ */
 export function fromStored(question: Question, stored: StoredAnswer): AnswerValue | undefined {
+  const isOffered = (value: string) => question.options.some((option) => option.value === value);
+
   switch (question.type) {
     case 'SCALE_0_10':
     case 'MATRIX_AREA':
       return stored.valueNumber === null ? undefined : { kind: 'number', value: stored.valueNumber };
     case 'SINGLE':
-      return stored.valueOption === null
+      return stored.valueOption === null || !isOffered(stored.valueOption)
         ? undefined
         : {
             kind: 'option',
             value: stored.valueOption,
             otherText: stored.valueText ?? undefined,
           };
-    case 'MULTI':
-      return stored.valueOptions.length === 0
+    case 'MULTI': {
+      const values = stored.valueOptions.filter(isOffered);
+      return values.length === 0
         ? undefined
         : {
             kind: 'options',
-            values: stored.valueOptions,
+            values,
             otherText: stored.valueText ?? undefined,
           };
+    }
     case 'TEXT':
       return stored.valueText === null ? undefined : { kind: 'text', value: stored.valueText };
   }
