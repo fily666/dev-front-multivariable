@@ -5,6 +5,10 @@ import { fieldId, type FieldProps } from './field.types';
 
 const VALUES = Array.from({ length: 11 }, (_, index) => index);
 
+/** Anclas del PDF, solo para un back que todavía no envía las de cada pregunta. */
+const FALLBACK_MIN_LABEL = 'Muy deficiente';
+const FALLBACK_MAX_LABEL = 'Excelente';
+
 /**
  * Escala 0-10 como botones segmentados.
  *
@@ -13,8 +17,9 @@ const VALUES = Array.from({ length: 11 }, (_, index) => index);
  * las once opciones a la vista y son un objetivo táctil grande.
  *
  * El grupo es un `radiogroup` real, así que las flechas del teclado lo recorren y un lector
- * de pantalla anuncia "3 de 11". Las anclas "muy deficiente"/"excelente" quedan visibles
- * porque sin ellas el número pierde significado.
+ * de pantalla anuncia "3 de 11". Las anclas quedan visibles porque sin ellas el número
+ * pierde significado, y vienen del catálogo porque cada pregunta mide algo distinto: el 10
+ * de "Cumplen los compromisos" es "Siempre cumplen", no "excelente".
  */
 export function ScaleField({
   question,
@@ -27,7 +32,11 @@ export function ScaleField({
 }: FieldProps) {
   const groupId = useId();
   const selected = value?.kind === 'number' ? value.value : null;
-  const describedBy = error ? `${groupId}-error` : undefined;
+  const describedBy = [`${groupId}-anchors`, error && `${groupId}-error`]
+    .filter(Boolean)
+    .join(' ');
+  const minLabel = question.scaleMinLabel ?? FALLBACK_MIN_LABEL;
+  const maxLabel = question.scaleMaxLabel ?? FALLBACK_MAX_LABEL;
 
   return (
     /*
@@ -69,9 +78,16 @@ export function ScaleField({
         })}
       </div>
 
-      <div className="flex justify-between text-xs text-foreground-muted">
-        <span>0 · muy deficiente</span>
-        <span>10 · excelente</span>
+      {/*
+       * Las anclas son frases cortas, pero en un teléfono angosto pueden partirse: cada una
+       * se queda pegada a su extremo de la regla y el hueco del medio evita que se toquen.
+       */}
+      <div
+        id={`${groupId}-anchors`}
+        className="flex justify-between gap-6 text-xs text-foreground-muted"
+      >
+        <span>0 · {minLabel}</span>
+        <span className="text-right">10 · {maxLabel}</span>
       </div>
 
       {error && (
