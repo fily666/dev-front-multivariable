@@ -77,7 +77,6 @@ export type CountedOption = DistributionRow;
 export interface ComponentsPayload {
   indicators: (IndicatorResult & { label: string; band: ThresholdBand | null })[];
   composite: IndicatorResult;
-  responseTimes: DistributionRow[];
   innovationNetwork: { sourceArea: string; targetArea: string; initiatives: number }[];
   thresholds: ThresholdBand[];
 }

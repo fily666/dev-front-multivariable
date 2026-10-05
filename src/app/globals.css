@@ -94,7 +94,7 @@
  * valen las tres primeras.
  *
  * Una sola serie va siempre en el tono 1. La rampa ordinal es para escalas con orden
- * natural (cumplimiento del ANS); la secuencial, para magnitud continua (mapa de calor);
+ * natural (frecuencia de interacción); la secuencial, para magnitud continua (mapa de calor);
  * el par divergente, para magnitudes con dos polos (brecha, motivos del NPS).
  */
 :root {

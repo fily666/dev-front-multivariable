@@ -14,8 +14,8 @@ const RAMP = [
 /**
  * Distribución sobre una escala ORDENADA, con el orden pintado en el color.
  *
- * El cumplimiento del ANS tiene orden natural (supera, cumple, parcial, no cumple), y
- * perderlo es perder el dato: lo que interesa no es qué opción gana sino hacia qué extremo
+ * La frecuencia de interacción tiene orden natural (diaria, varias por semana, semanal,
+ * mensual, esporádica), y perderlo es perder el dato: lo que interesa no es qué opción gana sino hacia qué extremo
  * se inclina la masa. Por eso conserva el orden de la escala —nunca se reordena por
  * frecuencia— y muestra las opciones en cero, porque un hueco también es información.
  *

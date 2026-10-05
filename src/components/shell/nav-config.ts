@@ -39,7 +39,7 @@ export const ANALYSIS_NAV: NavItem[] = [
     label: 'Componentes',
     icon: 'layers',
     badge: '10',
-    keywords: 'ans agilidad innovación instrumento',
+    keywords: 'agilidad innovación instrumento',
   },
   {
     href: '/admin/preguntas',

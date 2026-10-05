@@ -284,7 +284,7 @@ entera.
 | Motivos del NPS | **Barras enfrentadas** | Un motivo que pesa en los dos lados es la señal más útil |
 | Aspectos de un área | **Medidor con marca de referencia** (promedio de la empresa) | Se ve de inmediato dónde queda por debajo de lo típico |
 | Lo que resta cada índice al IMC | **Barras** de peso × (100 − valor) | El que más resta no siempre es el más bajo |
-| Cumplimiento del ANS | **Rampa ordinal** | Las categorías tienen orden natural |
+| Frecuencia de interacción | **Rampa ordinal** | Las categorías tienen orden natural |
 | Matrices de áreas | **Velo** del color de banda | 53 × 53 bloques saturados aplastan el número |
 
 ### Color: lo que está verificado

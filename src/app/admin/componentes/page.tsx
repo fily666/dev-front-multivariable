@@ -3,27 +3,24 @@
 import { useQuery } from '@tanstack/react-query';
 import { getComponents, getIndicesByArea, getIndicesByRole } from '@/lib/admin-client';
 import {
-  RESPONSE_TIME_OUT_OF_SCALE,
   byAreaInsight,
   hierarchyInsight,
   innovationInsight,
   radarInsight,
-  responseTimeInsight,
   rolesSpreadInsight,
 } from '@/lib/insights';
 import { useAnalysisFilters } from '@/lib/filters-store';
-import { formatIndex, formatShare, formatSigned } from '@/lib/score-scale';
+import { formatIndex, formatSigned } from '@/lib/score-scale';
 import { useAreaNames } from '@/lib/use-area-names';
 import { FilterBar } from '@/components/page/FilterBar';
 import { InsightTitle, PageBody, PageHeader, PrintButton, SectionHeading } from '@/components/page/PageHeader';
 import { DivergingBars } from '@/components/charts/DivergingBars';
 import { BarRanking } from '@/components/charts/BarRanking';
-import { ChartCard, Legend } from '@/components/charts/ChartCard';
+import { ChartCard } from '@/components/charts/ChartCard';
 import { DataTable } from '@/components/charts/DataTable';
 import { EnvelopeGate, LoadingCard } from '@/components/charts/EnvelopeGate';
 import { IndicatorMeters } from '@/components/charts/IndicatorMeter';
 import { IndicesHeatTable } from '@/components/charts/IndicesHeatTable';
-import { OrdinalBars } from '@/components/charts/OrdinalBars';
 
 /** Los siete del IMC más NIO: el mismo conjunto que el radar. */
 const INDEX_COLUMNS = ['IREL', 'ICOM', 'ISI', 'IAG', 'IINT', 'ICOL', 'IINN', 'NIO'];
@@ -127,96 +124,44 @@ export default function ComponentesPage() {
                   ]}
                 />
 
-                <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
-                  <ChartCard
-                    insight={responseTimeInsight(componentes.responseTimes)}
-                    subtitle="Si a la gente le responden dentro del ANS, en el orden de la escala"
-                    legend={
-                      <Legend
-                        items={[
-                          { label: 'De supera a no cumple', color: 'var(--ramp-3)', hint: 'más oscuro = peor' },
-                          { label: 'No conoce el ANS / no aplica', color: 'var(--border-strong)' },
-                        ]}
-                      />
-                    }
-                    views={[
-                      {
-                        id: 'grafica',
-                        label: 'Gráfica',
-                        content: (
-                          <OrdinalBars
-                            rows={componentes.responseTimes}
-                            outOfScale={[RESPONSE_TIME_OUT_OF_SCALE]}
-                            emptyMessage="Aún no hay respuestas con la pregunta del ANS."
-                          />
-                        ),
-                      },
-                      {
-                        id: 'tabla',
-                        label: 'Tabla',
-                        content: (
-                          <DataTable
-                            caption="Cumplimiento del ANS"
-                            rowKey={(row) => row.value}
-                            rows={componentes.responseTimes}
-                            minWidth={320}
-                            columns={[
-                              { key: 'op', header: 'Opción', render: (row) => row.label },
-                              { key: 'n', header: 'Respuestas', render: (row) => row.count },
-                              { key: 'pct', header: '%', render: (row) => formatShare(row.share) },
-                            ]}
-                          />
-                        ),
-                      },
-                    ]}
-                    howToRead={
-                      <p>
-                        Las opciones conservan su orden, de supera a no cumple, incluidas las que
-                        están en cero: un hueco en la distribución también dice algo. Alimenta el
-                        Índice de Agilidad; «No conoce el ANS / No aplica» va en gris y no puntúa.
-                      </p>
-                    }
-                  />
-
-                  <ChartCard
-                    insight={innovationInsight(aristas)}
-                    subtitle="Iniciativas conjuntas declaradas en los últimos seis meses, por par de áreas"
-                    views={[
-                      {
-                        id: 'grafica',
-                        label: 'Gráfica',
-                        content: (
-                          <BarRanking
-                            labelWidth="18rem"
-                            rows={aristas.slice(0, 10).map((edge) => ({
-                              key: `${edge.sourceArea}-${edge.targetArea}`,
-                              label: `${nombreDe(edge.sourceArea)} → ${nombreDe(edge.targetArea)}`,
-                              value: edge.initiatives,
-                            }))}
-                            emptyMessage="Sin iniciativas conjuntas registradas."
-                          />
-                        ),
-                      },
-                      {
-                        id: 'tabla',
-                        label: 'Tabla',
-                        content: (
-                          <DataTable
-                            caption="Iniciativas conjuntas por par de áreas"
-                            rowKey={(row) => `${row.sourceArea}-${row.targetArea}`}
-                            rows={aristas}
-                            minWidth={420}
-                            columns={[
-                              { key: 'de', header: 'Área que declara', render: (row) => nombreDe(row.sourceArea) },
-                              { key: 'con', header: 'Con', align: 'left', render: (row) => nombreDe(row.targetArea) },
-                              { key: 'n', header: 'Menciones', render: (row) => row.initiatives },
-                            ]}
-                          />
-                        ),
-                      },
-                    ]}
-                  />
-                </div>
+                <ChartCard
+                  insight={innovationInsight(aristas)}
+                  subtitle="Iniciativas conjuntas declaradas en los últimos seis meses, por par de áreas"
+                  views={[
+                    {
+                      id: 'grafica',
+                      label: 'Gráfica',
+                      content: (
+                        <BarRanking
+                          labelWidth="18rem"
+                          rows={aristas.slice(0, 10).map((edge) => ({
+                            key: `${edge.sourceArea}-${edge.targetArea}`,
+                            label: `${nombreDe(edge.sourceArea)} → ${nombreDe(edge.targetArea)}`,
+                            value: edge.initiatives,
+                          }))}
+                          emptyMessage="Sin iniciativas conjuntas registradas."
+                        />
+                      ),
+                    },
+                    {
+                      id: 'tabla',
+                      label: 'Tabla',
+                      content: (
+                        <DataTable
+                          caption="Iniciativas conjuntas por par de áreas"
+                          rowKey={(row) => `${row.sourceArea}-${row.targetArea}`}
+                          rows={aristas}
+                          minWidth={420}
+                          columns={[
+                            { key: 'de', header: 'Área que declara', render: (row) => nombreDe(row.sourceArea) },
+                            { key: 'con', header: 'Con', align: 'left', render: (row) => nombreDe(row.targetArea) },
+                            { key: 'n', header: 'Menciones', render: (row) => row.initiatives },
+                          ]}
+                        />
+                      ),
+                    },
+                  ]}
+                />
 
                 <SectionHeading kicker="Según quién responde" title="La misma organización, vista desde cada área" />
                 <EnvelopeGate query={byArea}>

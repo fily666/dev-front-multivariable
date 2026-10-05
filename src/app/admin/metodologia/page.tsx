@@ -21,7 +21,7 @@ const FORMULAS: { code: string; name: string; formula: string }[] = [
   { code: 'IREL', name: 'Relacionamiento', formula: 'Promedio de los 5 aspectos del C2 × 10' },
   { code: 'ICOM', name: 'Comunicación', formula: 'Promedio de los 5 ítems del C3 × 10' },
   { code: 'ISI', name: 'Servicio interno', formula: 'Promedio de los 5 ítems del C4 × 10' },
-  { code: 'IAG', name: 'Agilidad', formula: '0,75 × (ítems del C5 × 10) + 0,25 × cumplimiento del ANS' },
+  { code: 'IAG', name: 'Agilidad', formula: 'Promedio de los 3 ítems del C5 × 10' },
   { code: 'IINT', name: 'Integración', formula: 'Promedio de los 5 ítems del C6 × 10' },
   { code: 'ICOL', name: 'Colaboración', formula: 'Promedio de los 5 ítems del C7 × 10' },
   { code: 'IINN', name: 'Innovación', formula: '0,80 × (ítems del C8 × 10) + 0,20 × colaboración externa' },
