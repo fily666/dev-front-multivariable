@@ -35,7 +35,7 @@ export function PhaseProgress({
 
   return (
     <div
-      className="sticky top-0 z-10 -mx-5 flex flex-col gap-2 border-b border-border-subtle bg-background/92 px-5 py-3 backdrop-blur-sm sm:-mx-8 sm:px-8"
+      className="sticky top-3 z-20 flex flex-col gap-2 rounded-2xl bg-white/90 px-4 py-3 shadow-[0_0_0_1px_#0f172a12,0_10px_30px_-18px_#0f172a40] backdrop-blur-md sm:px-5"
       data-phase={active?.phase.id}
     >
       <div className="flex items-baseline justify-between gap-3">
@@ -71,7 +71,7 @@ export function PhaseProgress({
             data-phase={segment.phase.id}
             // Cada tramo pesa lo que pesan sus pasos.
             style={{ flexGrow: Math.max(segment.total, 1) }}
-            className="h-1.5 overflow-hidden rounded-full bg-surface-muted"
+            className="h-2 overflow-hidden rounded-full bg-surface-muted"
           >
             <div
               className="h-full rounded-full bg-phase transition-[width] duration-500"

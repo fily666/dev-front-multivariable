@@ -13,7 +13,7 @@ export function PhaseRoadmap() {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-sm text-foreground">El recorrido son cuatro bloques</h2>
+        <h2 className="text-[15px] text-foreground">El recorrido son cuatro bloques</h2>
         <span className="text-xs text-foreground-muted">15 minutos en total</span>
       </div>
 
@@ -24,9 +24,9 @@ export function PhaseRoadmap() {
           <li
             key={phase.id}
             data-phase={phase.id}
-            className="flex items-start gap-3.5 rounded-lg border border-phase-border border-l-4 border-l-phase-accent bg-phase-subtle px-4 py-3.5"
+            className="flex items-start gap-3.5 rounded-xl border border-phase-border border-l-4 border-l-phase-accent bg-phase-subtle px-4 py-3.5"
           >
-            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-lg bg-phase text-phase-on">
+            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-xl bg-phase text-phase-on">
               <PhaseIcon phase={phase} size={19} />
             </span>
             <div className="flex min-w-0 flex-col gap-0.5">

@@ -1,4 +1,5 @@
 import type { CountedOption } from '@/lib/admin.types';
+import { formatShare } from '@/lib/score-scale';
 import { EmptyState } from './InsufficientData';
 
 /**
@@ -9,8 +10,9 @@ import { EmptyState } from './InsufficientData';
  * la lectura más útil del componente: el mismo atributo vivido al revés según el área.
  *
  * Los dos lados NO van en verde y rojo. Ese par se derrumba con deuteranopia (ΔE 4,5),
- * así que el color estaría fingiendo informar. Van en el par frío/cálido verificado
- * (ΔE 25,9 con protanopia), y quien dice cuál es cuál es la palabra del encabezado.
+ * así que el color estaría fingiendo informar. Van en el par divergente azul/rojo
+ * verificado (ΔE 21,6 con protanopia), y quien dice cuál es cuál es la palabra del
+ * encabezado.
  */
 export function OpposedBars({
   promoters,
@@ -43,14 +45,14 @@ export function OpposedBars({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3 text-[11px] font-medium uppercase tracking-wide">
+      <div className="flex items-center gap-3 text-xs font-medium">
         <span className="flex flex-1 items-center justify-end gap-1.5 text-foreground-muted">
-          <span aria-hidden className="size-2.5 rounded-sm bg-diverge-warm" />
+          <span aria-hidden className="size-2.5 rounded-sm bg-diverge-neg" />
           Detractores
         </span>
-        <span className="w-32 shrink-0" />
+        <span className="w-28 shrink-0 sm:w-40" />
         <span className="flex flex-1 items-center gap-1.5 text-foreground-muted">
-          <span aria-hidden className="size-2.5 rounded-sm bg-diverge-cool" />
+          <span aria-hidden className="size-2.5 rounded-sm bg-diverge-pos" />
           Promotores
         </span>
       </div>
@@ -62,11 +64,11 @@ export function OpposedBars({
             <li key={row.value} className="flex items-center gap-3">
               <span className="flex flex-1 items-center justify-end gap-2">
                 <span className="text-xs tabular-nums text-foreground-muted">
-                  {row.det > 0 ? `${row.det.toFixed(0)}%` : ''}
+                  {row.det > 0 ? formatShare(row.det, 0) : ''}
                 </span>
                 <span className="relative h-5 flex-1">
                   <span
-                    className="absolute right-0 top-1/2 h-2.5 -translate-y-1/2 rounded-l-sm bg-diverge-warm"
+                    className="absolute right-0 top-1/2 h-3 -translate-y-1/2 rounded-l bg-diverge-neg"
                     style={{ width: `${(row.det / tope) * 100}%` }}
                   />
                 </span>
@@ -74,7 +76,7 @@ export function OpposedBars({
 
               <span
                 className={[
-                  'w-32 shrink-0 truncate text-center text-xs',
+                  'w-28 shrink-0 truncate text-center text-[13px] sm:w-40',
                   ambos ? 'font-bold text-foreground' : 'text-foreground',
                 ].join(' ')}
                 title={ambos ? `${row.label} — aparece con fuerza en los dos lados` : row.label}
@@ -85,12 +87,12 @@ export function OpposedBars({
               <span className="flex flex-1 items-center gap-2">
                 <span className="relative h-5 flex-1">
                   <span
-                    className="absolute left-0 top-1/2 h-2.5 -translate-y-1/2 rounded-r-sm bg-diverge-cool"
+                    className="absolute left-0 top-1/2 h-3 -translate-y-1/2 rounded-r bg-diverge-pos"
                     style={{ width: `${(row.pro / tope) * 100}%` }}
                   />
                 </span>
                 <span className="text-xs tabular-nums text-foreground-muted">
-                  {row.pro > 0 ? `${row.pro.toFixed(0)}%` : ''}
+                  {row.pro > 0 ? formatShare(row.pro, 0) : ''}
                 </span>
               </span>
             </li>
@@ -98,7 +100,7 @@ export function OpposedBars({
         })}
       </ul>
 
-      <p className="text-xs text-foreground-muted">
+      <p className="text-xs text-foreground-subtle">
         En negrita, los motivos que pesan en los dos lados a la vez.
       </p>
     </div>

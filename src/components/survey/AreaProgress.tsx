@@ -15,7 +15,7 @@ interface AreaProgressProps {
  */
 export function AreaProgress({ areaName, index, total }: AreaProgressProps) {
   return (
-    <div className="flex flex-col gap-2.5 rounded-lg border border-phase-border bg-phase-subtle px-4 py-3">
+    <div className="flex flex-col gap-2.5 rounded-xl border border-phase-border bg-phase-subtle px-4 py-3">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-[13px] text-foreground-muted">
           Está calificando a <strong className="font-bold text-phase">{areaName}</strong>

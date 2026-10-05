@@ -19,8 +19,8 @@ export function PhaseBand({
   detail: string;
 }) {
   return (
-    <div className="flex items-center gap-3.5 rounded-lg border border-phase-border border-l-4 border-l-phase-accent bg-phase-subtle px-4 py-3">
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-phase text-phase-on">
+    <div className="flex items-center gap-3.5 rounded-xl border border-phase-border border-l-4 border-l-phase-accent bg-phase-subtle px-4 py-3">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-phase text-phase-on">
         <PhaseIcon phase={phase} size={22} />
       </span>
       <div className="flex min-w-0 flex-col gap-0.5">
@@ -51,7 +51,7 @@ export function PhaseMilestone({
   screens: number;
 }) {
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-phase-border border-l-4 border-l-phase-accent bg-phase-subtle px-5 py-4">
+    <div className="flex flex-col gap-3 rounded-xl border border-phase-border border-l-4 border-l-phase-accent bg-phase-subtle px-5 py-4">
       {previous && (
         <p className="flex items-center gap-2 text-[13px] font-medium text-phase">
           <CheckIcon size={15} className="shrink-0" />
@@ -60,7 +60,7 @@ export function PhaseMilestone({
       )}
 
       <div className="flex items-center gap-3.5">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-phase text-phase-on">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-phase text-phase-on">
           <PhaseIcon phase={phase} size={24} />
         </span>
         <div className="flex min-w-0 flex-col gap-0.5">

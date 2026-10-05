@@ -44,7 +44,7 @@ export function ReviewStep({
         modificarlas.
       </p>
 
-      <section className="rounded-lg border border-border-subtle bg-surface p-4">
+      <section className="rounded-xl border border-border-subtle bg-surface-sunken p-4">
         <header className="mb-3 flex items-start justify-between gap-3">
           <h3 className="text-sm text-foreground">Identificación</h3>
           <button
@@ -90,7 +90,7 @@ export function ReviewStep({
               return (
                 <section
                   key={component.id}
-                  className="rounded-lg border border-phase-border bg-surface p-4 lg:mb-4 lg:break-inside-avoid lg:last:mb-0"
+                  className="rounded-xl border border-phase-border bg-white p-4 lg:mb-4 lg:break-inside-avoid lg:last:mb-0"
                 >
                   <header className="mb-3 flex items-start justify-between gap-3">
                     <h4 className="text-sm font-bold text-foreground">

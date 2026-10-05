@@ -3,6 +3,7 @@ import type {
   CountedOption,
   DistributionRow,
   IndicesByAreaPayload,
+  MonitoringPayload,
   NpsResult,
   OverviewPayload,
   PerceptionGapRow,
@@ -10,6 +11,7 @@ import type {
   ThresholdBand,
 } from './admin.types';
 import { ASPECT_LABELS } from './admin.types';
+import { formatDuration, formatNps, formatNumber, formatRelative } from './score-scale';
 
 /**
  * El motor de lecturas del panel.
@@ -36,6 +38,12 @@ export interface Insight {
   headline: string;
   /** El dato que la sostiene. Opcional: no toda lectura necesita nota al pie. */
   detail?: string;
+  /**
+   * El fragmento literal del titular que carga la conclusión («en riesgo», «partida en
+   * dos»). Las cabeceras lo destacan con el degradado de la marca; si falta, el titular se
+   * pinta parejo.
+   */
+  emphasis?: string;
 }
 
 /**
@@ -52,7 +60,8 @@ export function toneOfBand(band: ThresholdBand | null, bands: ThresholdBand[]): 
   return tones[Math.min(index, tones.length - 1)];
 }
 
-const nf = (value: number, decimals = 0) => value.toFixed(decimals);
+/** Las cifras de las lecturas usan el mismo formato que las tarjetas: «57,6», no «57.6». */
+const nf = (value: number, decimals = 0) => formatNumber(value, decimals);
 
 /** Ordena puntos del radar de peor a mejor, descartando los que no tienen dato. */
 function withValue(points: RadarPoint[]): (RadarPoint & { value: number })[] {
@@ -83,10 +92,18 @@ export function imcInsight(
     bad: `La colaboración entre áreas es crítica: ${nf(imc.value, 1)} sobre 100.`,
   };
 
+  const enfasis: Record<Tone, string> = {
+    good: 'una fortaleza',
+    neutral: 'sin holgura',
+    warn: 'en riesgo',
+    bad: 'crítica',
+  };
+
   return {
     tone,
     headline: frases[tone],
     detail: `Banda «${label}», calculada sobre ${imc.respondents} ${imc.respondents === 1 ? 'respuesta' : 'respuestas'}.`,
+    emphasis: enfasis[tone],
   };
 }
 
@@ -109,11 +126,43 @@ export function radarInsight(points: RadarPoint[], bands: ThresholdBand[]): Insi
   return {
     tone,
     headline: parejo
-      ? `El perfil es parejo: los ocho índices caben en ${nf(distancia, 1)} puntos, así que no hay un frente único que atacar.`
+      ? `El perfil es parejo: los ${conDato.length} índices caben en ${nf(distancia, 1)} puntos, así que no hay un frente único que atacar.`
       : `${peor.label} es el eslabón débil (${nf(peor.value, 1)}) y ${mejor.label} el más fuerte (${nf(mejor.value, 1)}).`,
+    emphasis: parejo ? 'parejo' : peor.label,
     detail: parejo
       ? `Entre ${peor.label} (${nf(peor.value, 1)}) y ${mejor.label} (${nf(mejor.value, 1)}).`
       : `${nf(distancia, 1)} puntos separan el extremo débil del fuerte.`,
+  };
+}
+
+/**
+ * Qué índices le restan más al compuesto. No es el más bajo sin más: un índice flojo que
+ * pesa poco resta menos que uno mediocre que pesa mucho, y es la resta la que decide
+ * dónde mover la aguja del IMC.
+ */
+export function compositeInsight(
+  points: RadarPoint[],
+  weights: { indicatorCode: string; weight: number }[],
+): Insight {
+  const pesos = new Map(weights.map((entry) => [entry.indicatorCode, entry.weight]));
+  const restas = withValue(points)
+    .filter((point) => pesos.has(point.code))
+    .map((point) => ({ point, resta: (pesos.get(point.code) ?? 0) * (100 - point.value) }))
+    .sort((a, b) => b.resta - a.resta);
+
+  if (restas.length < 2) {
+    return { tone: 'neutral', headline: 'Faltan índices con dato para descomponer el compuesto.' };
+  }
+
+  const total = restas.reduce((sum, entry) => sum + entry.resta, 0);
+  const [primero, segundo] = restas;
+  const par = `${primero.point.label} y ${segundo.point.label}`;
+
+  return {
+    tone: 'neutral',
+    headline: `${par} son los que más le restan al índice compuesto`,
+    emphasis: par,
+    detail: `Entre los dos explican ${nf(primero.resta + segundo.resta, 1)} de los ${nf(total, 1)} puntos que le faltan al IMC para llegar a 100.`,
   };
 }
 
@@ -199,30 +248,40 @@ export function npsInsight(nps: NpsResult): Insight {
   if (polarizado) {
     return {
       tone: 'warn',
-      headline: `La experiencia está partida en dos: ${promotores}% recomienda trabajar con su área y ${detractores}% no lo haría.`,
-      detail: `El NPS neto (${nps.value > 0 ? '+' : ''}${Math.round(nps.value)}) esconde esa división. Conviene leerlo por área antes que en global.`,
+      headline: `La experiencia está partida en dos: ${promotores} % recomienda trabajar con su área y ${detractores} % no lo haría.`,
+      detail: `El NPS neto (${formatNps(nps.value)}) esconde esa división. Conviene leerlo por área antes que en global.`,
+      emphasis: 'partida en dos',
     };
   }
 
   if (indiferente) {
     return {
       tone: 'warn',
-      headline: `Domina la indiferencia: ${pasivos}% son pasivos, ni recomiendan ni desaconsejan.`,
+      headline: `Domina la indiferencia: ${pasivos} % son pasivos, ni recomiendan ni desaconsejan.`,
       detail: 'Es el perfil de una relación que funciona pero no genera adhesión.',
+      emphasis: 'indiferencia',
     };
   }
 
   const frases: Record<Tone, string> = {
-    good: `Hay adhesión real: ${promotores}% recomendaría trabajar con su área, contra ${detractores}% que no.`,
-    neutral: `La experiencia se sostiene apenas: ${promotores}% promotores contra ${detractores}% detractores.`,
-    warn: `Pesan más los detractores: ${detractores}% no recomendaría trabajar con su área, contra ${promotores}% que sí.`,
-    bad: `La experiencia de servicio interno está rota: ${detractores}% detractores contra ${promotores}% promotores.`,
+    good: `Hay adhesión real: ${promotores} % recomendaría trabajar con su área, contra ${detractores} % que no.`,
+    neutral: `La experiencia se sostiene apenas: ${promotores} % promotores contra ${detractores} % detractores.`,
+    warn: `Pesan más los detractores: ${detractores} % no recomendaría trabajar con su área, contra ${promotores} % que sí.`,
+    bad: `La experiencia de servicio interno está rota: ${detractores} % detractores contra ${promotores} % promotores.`,
+  };
+
+  const enfasis: Record<Tone, string> = {
+    good: 'adhesión real',
+    neutral: 'se sostiene apenas',
+    warn: 'los detractores',
+    bad: 'está rota',
   };
 
   return {
     tone,
     headline: frases[tone],
     detail: `${nps.total} ${nps.total === 1 ? 'calificación' : 'calificaciones'} de área.`,
+    emphasis: enfasis[tone],
   };
 }
 
@@ -258,16 +317,16 @@ export function collectionInsight(
           : 'bad';
 
   const frases: Record<Tone, string> = {
-    good: `Habló ${nf(participation.rate, 1)}% de la empresa: el corte es representativo.`,
-    neutral: `Habló ${nf(participation.rate, 1)}% de la empresa. Alcanza para leer tendencias, no para cerrar conclusiones por área.`,
-    warn: `Solo habló ${nf(participation.rate, 1)}% de la empresa: las cifras orientan, no concluyen.`,
-    bad: `Con ${nf(participation.rate, 1)}% de participación las cifras no son representativas todavía.`,
+    good: `Habló ${nf(participation.rate, 1)} % de la empresa: el corte es representativo.`,
+    neutral: `Habló ${nf(participation.rate, 1)} % de la empresa. Alcanza para leer tendencias, no para cerrar conclusiones por área.`,
+    warn: `Solo habló ${nf(participation.rate, 1)} % de la empresa: las cifras orientan, no concluyen.`,
+    bad: `Con ${nf(participation.rate, 1)} % de participación las cifras no son representativas todavía.`,
   };
 
   const detalle = [
     `${participation.completed} de ${participation.population} personas.`,
     abandono !== null && abandono >= 20
-      ? `${nf(abandono, 0)}% de quienes la abrieron no la terminaron.`
+      ? `${nf(abandono, 0)} % de quienes la abrieron no la terminaron.`
       : null,
     `Los cortes con menos de ${minCohortSize} respuestas se ocultan para preservar el anonimato.`,
   ]
@@ -300,15 +359,15 @@ export function responseTimeInsight(rows: DistributionRow[]): Insight {
   // exigir, un acuerdo que nadie conoce.
   const headline =
     noCumple >= 15
-      ? `A ${nf(noCumple, 0)}% no le cumplen el ANS: ahí se pierde la agilidad.`
+      ? `A ${nf(noCumple, 0)} % no le cumplen el ANS: ahí se pierde la agilidad.`
       : desconoce >= 30
-        ? `${nf(desconoce, 0)}% no conoce el ANS de sus solicitudes: antes que cumplirlo, hay que darlo a conocer.`
-        : `${nf(cumple, 0)}% recibe respuesta dentro del ANS o antes.`;
+        ? `${nf(desconoce, 0)} % no conoce el ANS de sus solicitudes: antes que cumplirlo, hay que darlo a conocer.`
+        : `${nf(cumple, 0)} % recibe respuesta dentro del ANS o antes.`;
 
   return {
     tone,
     headline,
-    detail: `${nf(cumple, 0)}% cumple o supera el ANS · ${nf(noCumple, 0)}% no lo cumple · ${nf(desconoce, 0)}% no lo conoce o no aplica.`,
+    detail: `${nf(cumple, 0)} % cumple o supera el ANS · ${nf(noCumple, 0)} % no lo cumple · ${nf(desconoce, 0)} % no lo conoce o no aplica.`,
   };
 }
 
@@ -472,8 +531,8 @@ export function barriersInsight(barriers: CountedOption[]): Insight {
   return {
     tone: top.share >= 50 ? 'warn' : 'neutral',
     headline: dominante
-      ? `El obstáculo dominante es ${top.label.toLowerCase()}: lo señala ${nf(top.share, 0)}% de los encuestados.`
-      : `No hay un obstáculo único: ${top.label.toLowerCase()} (${nf(top.share, 0)}%) y ${segundo.label.toLowerCase()} (${nf(segundo.share, 0)}%) van casi empatados.`,
+      ? `El obstáculo dominante es ${top.label.toLowerCase()}: lo señala ${nf(top.share, 0)} % de los encuestados.`
+      : `No hay un obstáculo único: ${top.label.toLowerCase()} (${nf(top.share, 0)} %) y ${segundo.label.toLowerCase()} (${nf(segundo.share, 0)} %) van casi empatados.`,
     detail: dominante
       ? 'Un obstáculo que se despega del resto es la palanca más barata: arreglarlo mueve todo lo demás.'
       : 'Sin un obstáculo dominante, atacar uno solo deja el problema en pie.',
@@ -504,7 +563,7 @@ export function motivesInsight(motives: {
     const { option, contra } = ambos[0];
     return {
       tone: 'warn',
-      headline: `${option.label} divide: es la razón de ${nf(option.share, 0)}% de los promotores y de ${nf(contra.share, 0)}% de los detractores.`,
+      headline: `${option.label} divide: es la razón de ${nf(option.share, 0)} % de los promotores y de ${nf(contra.share, 0)} % de los detractores.`,
       detail:
         'El mismo atributo se vive de forma opuesta según el área con la que se trate: el problema no es la empresa, es la desigualdad entre áreas.',
     };
@@ -516,8 +575,8 @@ export function motivesInsight(motives: {
   return {
     tone: topDetractor ? 'neutral' : 'good',
     headline: topDetractor
-      ? `Lo que más resta es ${topDetractor.label.toLowerCase()} (${nf(topDetractor.share, 0)}% de los detractores)${topPromotor ? `; lo que más suma es ${topPromotor.label.toLowerCase()} (${nf(topPromotor.share, 0)}%)` : ''}.`
-      : `Lo que más suma es ${topPromotor.label.toLowerCase()} (${nf(topPromotor.share, 0)}% de los promotores).`,
+      ? `Lo que más resta es ${topDetractor.label.toLowerCase()} (${nf(topDetractor.share, 0)} % de los detractores)${topPromotor ? `; lo que más suma es ${topPromotor.label.toLowerCase()} (${nf(topPromotor.share, 0)} %)` : ''}.`
+      : `Lo que más suma es ${topPromotor.label.toLowerCase()} (${nf(topPromotor.share, 0)} % de los promotores).`,
   };
 }
 
@@ -528,7 +587,7 @@ export function strengthenInsight(areas: CountedOption[]): Insight {
   const top = [...areas].sort((a, b) => b.share - a.share)[0];
   return {
     tone: 'neutral',
-    headline: `${top.label} es el área que más personas piden fortalecer: ${nf(top.share, 0)}% la menciona.`,
+    headline: `${top.label} es el área que más personas piden fortalecer: ${nf(top.share, 0)} % la menciona.`,
     detail:
       'Es una petición de más relación, no una queja de desempeño: suele señalar un área con la que cuesta trabajar por diseño, no por actitud.',
   };
@@ -546,7 +605,7 @@ export function openAnswersInsight(
 
   return {
     tone: clasificadas === answers.length ? 'good' : 'neutral',
-    headline: `${answers.length} ${answers.length === 1 ? 'persona escribió' : 'personas escribieron'} qué cambiarían (${nf(cobertura, 0)}% de quienes respondieron).`,
+    headline: `${answers.length} ${answers.length === 1 ? 'persona escribió' : 'personas escribieron'} qué cambiarían (${nf(cobertura, 0)} % de quienes respondieron).`,
     detail:
       clasificadas === answers.length
         ? 'Todas están clasificadas por tema.'
@@ -572,5 +631,226 @@ export function innovationInsight(
     tone: 'neutral',
     headline: `${participantes.size} áreas aparecen en alguna iniciativa conjunta, con ${total} ${total === 1 ? 'mención' : 'menciones'} en total.`,
     detail: 'Las áreas que no aparecen aquí son las que no han desarrollado nada con nadie.',
+  };
+}
+
+// ---------------------------------------------------------------- monitoreo
+
+type Totals = MonitoringPayload['totals'];
+
+const completas = (n: number) => `${n} ${n === 1 ? 'encuesta completa' : 'encuestas completas'}`;
+
+/**
+ * El titular del monitoreo: cuánto se ha recogido y qué es lo que más pesa ahora mismo.
+ * Con población registrada manda la participación; sin ella, el abandono, que es lo único
+ * que se puede corregir mientras la encuesta sigue abierta.
+ */
+export function monitoringInsight(totals: Totals, now: number = Date.now()): Insight {
+  if (totals.started === 0) {
+    return {
+      tone: 'neutral',
+      headline: 'Todavía nadie ha abierto la encuesta.',
+      detail: 'En cuanto llegue la primera, este tablero se actualiza solo.',
+    };
+  }
+
+  const detalle = [
+    totals.lastSubmittedAt ? `La última se envió ${formatRelative(totals.lastSubmittedAt, now)}.` : 'Ninguna se ha enviado todavía.',
+    totals.activeNow > 0
+      ? `${totals.activeNow} ${totals.activeNow === 1 ? 'persona está respondiendo' : 'personas están respondiendo'} ahora.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  if (totals.participationRate !== null) {
+    const tasa = totals.participationRate;
+    const tone: Tone = tasa >= 70 ? 'good' : tasa >= 50 ? 'neutral' : tasa >= 30 ? 'warn' : 'bad';
+    const fragmento = `${nf(tasa, 1)}\u202f% de la empresa`;
+    return {
+      tone,
+      headline: `${completas(totals.completed)}: ya habló el ${fragmento}`,
+      emphasis: fragmento,
+      detail: detalle,
+    };
+  }
+
+  const abandono = totals.completionRate === null ? null : 100 - totals.completionRate;
+  if (abandono !== null && abandono >= 35 && totals.started >= 5) {
+    const cuanto = abandono >= 50 ? 'más de la mitad' : `el ${nf(abandono, 0)}\u202f%`;
+    return {
+      tone: 'warn',
+      headline: `${completas(totals.completed)}, pero ${cuanto} de quienes la abren no la termina`,
+      emphasis: 'no la termina',
+      detail: detalle,
+    };
+  }
+
+  return {
+    tone: totals.completionRate !== null && totals.completionRate >= 80 ? 'good' : 'neutral',
+    headline: `${completas(totals.completed)} de ${totals.started} abiertas`,
+    emphasis: completas(totals.completed),
+    detail: detalle,
+  };
+}
+
+/** Si la recolección sigue viva: los envíos de la última semana contra los anteriores. */
+export function paceInsight(
+  timeline: MonitoringPayload['timeline'],
+  lastSubmittedAt: string | null,
+  now: number = Date.now(),
+): Insight {
+  if (timeline.length === 0) {
+    return { tone: 'neutral', headline: 'Todavía no hay actividad que trazar.' };
+  }
+  const ultimos = timeline.slice(-7).reduce((sum, day) => sum + day.completed, 0);
+  const diasSinEnvio = lastSubmittedAt
+    ? Math.round((now - new Date(lastSubmittedAt).getTime()) / 86_400_000)
+    : null;
+
+  if (diasSinEnvio !== null && diasSinEnvio >= 3) {
+    return {
+      tone: 'warn',
+      headline: `La recolección se detuvo: ${diasSinEnvio} días sin una encuesta completa`,
+      detail:
+        'Las curvas planas al final son la señal de que la convocatoria dejó de mover gente. Un recordatorio suele reactivarla.',
+    };
+  }
+
+  const pico = [...timeline].sort((a, b) => b.completed - a.completed)[0];
+  return {
+    tone: 'neutral',
+    headline: `${completas(ultimos)} en los últimos siete días`,
+    detail: pico.completed > 0 ? `El día con más envíos fue el ${pico.date.split('-').reverse().join('/')}: ${pico.completed}.` : undefined,
+  };
+}
+
+/** Dónde se abandona: el paso con la caída más grande respecto al anterior. */
+export function dropOffInsight(rows: { label: string; value: number }[]): Insight {
+  if (rows.length < 2 || rows[0].value === 0) {
+    return { tone: 'neutral', headline: 'Todavía no hay recorridos que seguir.' };
+  }
+  let peor = { index: -1, caida: 0 };
+  rows.forEach((row, index) => {
+    if (index === 0) return;
+    const caida = rows[index - 1].value - row.value;
+    if (caida > peor.caida) peor = { index, caida };
+  });
+  const final = rows[rows.length - 1].value;
+  const conserva = (final / rows[0].value) * 100;
+
+  if (peor.index < 0) {
+    return {
+      tone: 'good',
+      headline: 'Nadie abandona a mitad de camino: quien empieza, termina.',
+    };
+  }
+
+  const paso = rows[peor.index].label;
+  const antes = peor.index === 1;
+  return {
+    tone: conserva < 60 ? 'warn' : 'neutral',
+    headline: antes
+      ? `La mayor pérdida ocurre antes de empezar: ${peor.caida} abren la encuesta y no guardan ni el primer componente`
+      : `«${paso}» es donde más se abandona: ${peor.caida} ${peor.caida === 1 ? 'encuesta no pasa' : 'encuestas no pasan'} de ahí`,
+    detail: `De cada 100 que la abren, ${nf(conserva, 0)} la envían.`,
+  };
+}
+
+/** La duración de quienes terminan, contra los 15 minutos que estima el instrumento. */
+export function durationInsight(median: number | null): Insight {
+  if (median === null) {
+    return { tone: 'neutral', headline: 'Todavía no hay encuestas terminadas con duración.' };
+  }
+  const texto = formatDuration(median);
+  if (median < 300) {
+    return {
+      tone: 'warn',
+      headline: `La mitad la termina en menos de ${texto}: demasiado rápido para leer 46 preguntas`,
+      detail:
+        'Puede ser gente que responde sin leer o envíos de prueba. Conviene revisarlo antes de sacar conclusiones del corte.',
+    };
+  }
+  if (median > 25 * 60) {
+    return {
+      tone: 'warn',
+      headline: `La mitad tarda más de ${texto}: bastante más de los 15 minutos prometidos`,
+      detail: 'Una encuesta más larga de lo anunciado es la causa más común de abandono.',
+    };
+  }
+  return {
+    tone: 'good',
+    headline: `La mitad la termina en ${texto}, cerca de los 15 minutos estimados`,
+  };
+}
+
+/** Cuántas áreas ya tienen respuestas suficientes para publicarse sin romper el anonimato. */
+export function coverageInsight(
+  areas: MonitoringPayload['byArea'],
+  minCohortSize: number,
+): Insight {
+  const evaluables = areas.filter((area) => area.areaCode !== 'OTRA');
+  const listas = evaluables.filter((area) => area.completed >= minCohortSize).length;
+  const vacias = evaluables.filter((area) => area.completed === 0).length;
+  const fragmento = `${listas} de ${evaluables.length} áreas`;
+
+  return {
+    tone: listas === evaluables.length ? 'good' : listas >= evaluables.length / 2 ? 'neutral' : 'warn',
+    headline:
+      listas === 0
+        ? `Ninguna de las ${evaluables.length} áreas tiene todavía respuestas suficientes para leerse por separado`
+        : `${fragmento} ya tienen respuestas suficientes para leerse por separado`,
+    emphasis: listas === 0 ? undefined : fragmento,
+    detail: `Un área se publica con al menos ${minCohortSize} respuestas propias.${vacias > 0 ? ` ${vacias} no ${vacias === 1 ? 'tiene' : 'tienen'} ninguna todavía.` : ''}`,
+  };
+}
+
+/** Qué niveles de cargo faltan: sin ellos, los cortes por nivel quedan cojos. */
+export function rolesInsight(roles: MonitoringPayload['byRole']): Insight {
+  const total = roles.reduce((sum, role) => sum + role.completed, 0);
+  if (total === 0) return { tone: 'neutral', headline: 'Todavía no hay encuestas completas por cargo.' };
+
+  const ausentes = roles.filter((role) => role.completed === 0).map((role) => role.label.toLowerCase());
+  if (ausentes.length > 0) {
+    const lista =
+      ausentes.length === 1
+        ? ausentes[0]
+        : `${ausentes.slice(0, -1).join(', ')} y ${ausentes[ausentes.length - 1]}`;
+    return {
+      tone: 'warn',
+      headline: `Falta la voz de ${lista}: ninguna encuesta completa de ese nivel`,
+      detail: 'Los cortes por cargo solo comparan niveles que respondieron.',
+    };
+  }
+  const ordenados = [...roles].sort((a, b) => b.completed - a.completed);
+  const empatados = ordenados.filter((role) => role.completed === ordenados[0].completed);
+  // Con un empate arriba no hay «el más representado»: nombrar a uno inventaría una
+  // diferencia que el dato no tiene.
+  return {
+    tone: 'good',
+    headline:
+      empatados.length === 1
+        ? `Los ${roles.length} niveles de cargo ya respondieron; ${ordenados[0].label.toLowerCase()} es el más representado`
+        : `Los ${roles.length} niveles de cargo ya tienen al menos una encuesta completa`,
+  };
+}
+
+const DIAS = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados', 'domingos'];
+
+/** La franja en la que más se responde: cuándo conviene mandar el recordatorio. */
+export function scheduleInsight(cells: MonitoringPayload['heatmap']): Insight {
+  if (cells.length === 0) return { tone: 'neutral', headline: 'Todavía no hay envíos para ubicar.' };
+  const porDia = new Array(7).fill(0) as number[];
+  const porHora = new Array(24).fill(0) as number[];
+  for (const cell of cells) {
+    porDia[cell.weekday] += cell.completed;
+    porHora[cell.hour] += cell.completed;
+  }
+  const dia = porDia.indexOf(Math.max(...porDia));
+  const hora = porHora.indexOf(Math.max(...porHora));
+  return {
+    tone: 'neutral',
+    headline: `Se responde sobre todo los ${DIAS[dia]} y hacia las ${hora}:00`,
+    detail: 'Un recordatorio rinde más si llega justo antes de la franja en la que la gente ya responde.',
   };
 }

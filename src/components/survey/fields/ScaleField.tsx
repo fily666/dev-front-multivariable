@@ -65,11 +65,11 @@ export function ScaleField({
               onClick={() => onChange({ kind: 'number', value: option })}
               id={`${fieldId(question, areaContext?.code)}-${option}`}
               className={[
-                'rounded-md border py-2 text-sm font-medium transition-colors',
+                'min-h-11 rounded-lg border text-sm font-semibold tabular-nums transition-[background-color,border-color,transform]',
                 'disabled:cursor-not-allowed disabled:opacity-50',
                 isSelected
-                  ? 'border-phase bg-phase text-phase-on'
-                  : 'border-border-subtle bg-surface text-foreground hover:border-phase hover:bg-phase-subtle',
+                  ? 'scale-105 border-phase bg-phase text-phase-on shadow-[0_6px_16px_-8px_var(--phase-ink)]'
+                  : 'border-border-subtle bg-white text-foreground hover:border-phase hover:bg-phase-subtle',
               ].join(' ')}
             >
               {option}

@@ -1,3 +1,5 @@
+import { formatSigned } from '@/lib/score-scale';
+import { stagger } from './chart-utils';
 import { EmptyState } from './InsufficientData';
 
 export interface DivergingRow {
@@ -15,20 +17,24 @@ export interface DivergingRow {
  * cae y cuánto. Una tabla de números con signo obliga a leer fila por fila para encontrar
  * los extremos; aquí saltan a la vista.
  *
- * Dos tonos, frío contra cálido, porque dos fríos no se leen como opuestos. Van con la
- * etiqueta de su lado en el encabezado: el color refuerza, no informa solo.
+ * Dos tonos, azul contra rojo (ΔE 21,6 con protanopia), porque dos fríos no se leen como
+ * opuestos. Van con la etiqueta de su lado en el encabezado: el color refuerza, no
+ * informa solo.
  */
 export function DivergingBars({
   rows,
   negativeLabel,
   positiveLabel,
   unit = '',
+  decimals = 1,
   emptyMessage,
 }: {
   rows: DivergingRow[];
   negativeLabel: string;
   positiveLabel: string;
   unit?: string;
+  /** Decimales del valor escrito: el NPS va entero, la brecha con uno. */
+  decimals?: number;
   emptyMessage?: string;
 }) {
   const conDato = rows.filter(
@@ -45,49 +51,50 @@ export function DivergingBars({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3 text-[11px] font-medium uppercase tracking-wide">
+      <div className="flex items-center justify-between gap-3 text-xs font-medium whitespace-nowrap text-foreground-muted sm:pr-16 sm:pl-[13.75rem]">
         <span className="flex items-center gap-1.5 text-foreground-muted">
-          <span aria-hidden className="size-2.5 rounded-sm bg-diverge-warm" />
+          <span aria-hidden className="size-2.5 rounded-sm bg-diverge-neg" />
           {negativeLabel}
         </span>
         <span className="flex items-center gap-1.5 text-foreground-muted">
           {positiveLabel}
-          <span aria-hidden className="size-2.5 rounded-sm bg-diverge-cool" />
+          <span aria-hidden className="size-2.5 rounded-sm bg-diverge-pos" />
         </span>
       </div>
 
-      <ul className="flex flex-col gap-2">
-        {ordenadas.map((row) => {
+      <ul className="flex flex-col gap-1.5">
+        {ordenadas.map((row, index) => {
           const share = (Math.abs(row.value) / tope) * 50;
           const negativa = row.value < 0;
 
           return (
             <li key={row.key} className="flex items-center gap-3">
-              <span className="w-40 shrink-0 truncate text-xs text-foreground" title={row.label}>
+              <span className="w-28 shrink-0 truncate text-[13px] text-foreground sm:w-52" title={row.label}>
                 {row.label}
               </span>
 
-              <span className="relative h-5 flex-1" title={row.hint ?? row.label}>
+              <span className="relative h-6 flex-1" title={row.hint ?? row.label}>
                 {/* La línea del cero, siempre visible: sin ella no hay contra qué leer. */}
                 <span
                   aria-hidden
-                  className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border-strong"
+                  className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-[var(--chart-benchmark)] opacity-40"
                 />
                 <span
-                  className="absolute top-1/2 h-2.5 -translate-y-1/2 rounded-sm"
+                  className={`lk-graf-barra absolute top-1/2 h-3 -translate-y-1/2 ${negativa ? 'rounded-l' : 'rounded-r'}`}
                   style={{
+                    ...stagger(index),
+                    transformOrigin: negativa ? 'right center' : 'left center',
                     width: `${Math.max(share, 0.6)}%`,
                     [negativa ? 'right' : 'left']: '50%',
                     backgroundColor: negativa
-                      ? 'var(--diverge-warm)'
-                      : 'var(--diverge-cool)',
+                      ? 'var(--diverge-neg)'
+                      : 'var(--diverge-pos)',
                   }}
                 />
               </span>
 
-              <span className="w-14 shrink-0 text-right text-xs font-bold tabular-nums text-foreground">
-                {row.value > 0 ? '+' : ''}
-                {row.value.toFixed(1)}
+              <span className="w-14 shrink-0 text-right text-[13px] font-semibold tabular-nums text-foreground">
+                {formatSigned(row.value, decimals)}
                 {unit}
               </span>
             </li>

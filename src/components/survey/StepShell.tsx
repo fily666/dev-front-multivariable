@@ -48,7 +48,7 @@ export function StepShell({
          * así que es el que hace visible de un golpe que se cambió de terreno; el resto
          * del color (cinta, escala, botón) lo confirma.
          */}
-        <h2 id="step-title" className="text-xl text-phase sm:text-2xl">
+        <h2 id="step-title" className="text-[1.5rem] leading-tight tracking-tight text-phase sm:text-[1.85rem]">
           {title}
         </h2>
         {intro && (
@@ -63,7 +63,7 @@ export function StepShell({
       <div className="flex flex-col gap-7">{children}</div>
 
       {error && (
-        <p role="alert" className="rounded-lg bg-danger-subtle px-4 py-3 text-sm text-danger">
+        <p role="alert" className="rounded-xl bg-danger-subtle px-4 py-3 text-sm text-danger">
           {error}
         </p>
       )}
@@ -73,7 +73,7 @@ export function StepShell({
        * continuar cae fuera de pantalla y hay que ir a buscarlo. Pegado, el siguiente paso
        * está siempre a un toque, y al lado se ve que lo respondido ya quedó guardado.
        */}
-      <footer className="sticky bottom-0 -mx-5 flex flex-col gap-2.5 border-t border-border-subtle bg-background/92 px-5 pb-5 pt-3.5 backdrop-blur-sm sm:-mx-8 sm:px-8">
+      <footer className="sticky bottom-0 z-10 -mx-5 -mb-7 flex flex-col gap-2.5 rounded-b-2xl border-t border-border-subtle bg-white/95 px-5 pt-3.5 pb-5 backdrop-blur-sm sm:-mx-8 sm:-mb-9 sm:px-8">
         <div className="flex items-center justify-between gap-3 text-xs text-foreground-muted">
           <span className="flex items-center gap-1.5">
             <CheckIcon size={12} className="shrink-0 text-phase" />
@@ -92,7 +92,7 @@ export function StepShell({
               type="button"
               onClick={onBack}
               disabled={busy}
-              className="rounded-lg px-4 py-2.5 text-sm font-medium text-foreground-muted hover:text-foreground disabled:opacity-50"
+              className="min-h-12 rounded-xl px-4 text-sm font-medium text-foreground-muted hover:bg-surface-muted hover:text-foreground disabled:opacity-50"
             >
               {backLabel}
             </button>
@@ -104,9 +104,14 @@ export function StepShell({
             type="button"
             onClick={onNext}
             disabled={busy}
-            className="rounded-lg bg-phase px-6 py-2.5 text-sm font-bold text-phase-on hover:bg-phase-hover disabled:opacity-60"
+            className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-phase px-6 text-sm font-semibold text-phase-on shadow-[0_10px_24px_-14px_var(--phase-ink)] transition-[background-color,transform] hover:-translate-y-px hover:bg-phase-hover active:scale-[0.98] disabled:translate-y-0 disabled:opacity-60"
           >
             {busy ? 'Guardando…' : nextLabel}
+            {!busy && (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14 M13 6l6 6-6 6" />
+              </svg>
+            )}
           </button>
         </div>
       </footer>
@@ -133,13 +138,13 @@ export function QuestionBlock({
        * pantalla dé para más. Lo que aprovecha el ancho es lo que viene debajo.
        */}
       <div className="flex max-w-prose flex-col gap-1">
-        <p className="text-sm font-medium text-foreground">
+        <p className="text-[15px] font-semibold leading-snug text-foreground">
           {label}
           {!required && (
             <span className="ml-2 text-xs font-normal text-foreground-muted">(opcional)</span>
           )}
         </p>
-        {helpText && <p className="text-xs text-foreground-muted">{helpText}</p>}
+        {helpText && <p className="text-[13px] text-foreground-muted">{helpText}</p>}
       </div>
       {children}
     </div>

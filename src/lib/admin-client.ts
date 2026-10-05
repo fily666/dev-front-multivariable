@@ -6,6 +6,7 @@ import type {
   Envelope,
   IndicatorsPayload,
   IndicesByAreaPayload,
+  MonitoringPayload,
   NpsPayload,
   OverviewPayload,
   QualitativePayload,
@@ -58,6 +59,9 @@ export const getAreaDetail = (code: string, filters?: AdminFilters) =>
 
 export const getIndicesByArea = (filters?: AdminFilters) =>
   apiFetch<Envelope<IndicesByAreaPayload>>('/admin/indices-by-area', { query: toQuery(filters) });
+
+export const getMonitoring = (filters?: AdminFilters) =>
+  apiFetch<Envelope<MonitoringPayload>>('/admin/monitoring', { query: toQuery(filters) });
 
 export const getResponses = (page: number, pageSize: number, filters?: AdminFilters) =>
   apiFetch<Envelope<ResponsesPayload>>('/admin/responses', {

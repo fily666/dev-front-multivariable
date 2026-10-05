@@ -57,15 +57,15 @@ export function SurveyWizard() {
 
   if (state.loading) {
     return (
-      <p className="py-16 text-center text-sm text-foreground-muted" role="status">
+      <div className="lk-tarjeta py-16 text-center text-sm text-foreground-muted" role="status">
         Cargando la encuesta…
-      </p>
+      </div>
     );
   }
 
   if (state.loadError || !state.schema) {
     return (
-      <div className="py-16 text-center" role="alert">
+      <div className="lk-tarjeta px-6 py-16 text-center" role="alert">
         <p className="text-sm text-danger">{state.loadError}</p>
       </div>
     );
@@ -75,21 +75,23 @@ export function SurveyWizard() {
     return (
       <div className="flex flex-col gap-6">
         {state.resumable && (
-          <div className="flex flex-col gap-3 rounded-lg border border-brand bg-brand-subtle p-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-foreground">
+          <div className="lk-tarjeta lk-anim flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <p className="flex items-center gap-2.5 text-sm text-foreground">
+              <span aria-hidden className="size-2 shrink-0 rounded-full bg-lk-blue" />
               Tiene una encuesta a medio diligenciar en este navegador.
             </p>
             <button
               type="button"
               onClick={() => void actions.resume()}
               disabled={state.busy}
-              className="shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60"
+              className="lk-button min-h-11 shrink-0 rounded-xl px-5 text-sm font-semibold"
             >
               Continuar donde quedé
             </button>
           </div>
         )}
 
+        <SurveyCard>
         <WelcomeStep
           schema={state.schema}
           identity={state.identity}
@@ -99,6 +101,7 @@ export function SurveyWizard() {
           busy={state.busy}
           error={state.stepError}
         />
+        </SurveyCard>
       </div>
     );
   }
@@ -117,13 +120,15 @@ export function SurveyWizard() {
      * por props hasta el último campo. Fuera de un bloque (bienvenida, revisión) los
      * tokens valen lo mismo que la marca.
      */
-    <div className="flex flex-col gap-7" data-phase={phase?.id}>
+    <div className="flex flex-col gap-4" data-phase={phase?.id}>
       <PhaseProgress
         segments={segments}
         current={state.stepIndex + 1}
         total={totalSteps}
         remainingMinutes={state.remainingMinutes}
       />
+
+      <SurveyCard tinted={Boolean(phase)}>
 
       {currentStep?.kind === 'welcome' && (
         <WelcomeStep
@@ -216,6 +221,23 @@ export function SurveyWizard() {
           />
         </StepShell>
       )}
+      </SurveyCard>
+    </div>
+  );
+}
+
+/**
+ * La tarjeta de la encuesta. Dentro de un bloque, el filete superior toma el acento del
+ * bloque; en la bienvenida y la revisión, el degradado de la marca.
+ */
+function SurveyCard({ children, tinted }: { children: React.ReactNode; tinted?: boolean }) {
+  return (
+    <div className="lk-tarjeta lk-anim relative">
+      <div
+        aria-hidden
+        className={tinted ? 'h-1.5 rounded-t-2xl bg-phase-accent' : 'lk-accent-bar h-1.5 rounded-t-2xl'}
+      />
+      <div className="px-5 pt-7 pb-7 sm:px-8 sm:pt-9 sm:pb-9">{children}</div>
     </div>
   );
 }

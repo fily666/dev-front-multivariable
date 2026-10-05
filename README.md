@@ -43,19 +43,22 @@ regenera los tipos de ruta. Este proyecto usa esos tipos generados: vea
 
 ## Rutas
 
-9 rutas más el proxy, confirmadas por `next build`:
+11 rutas más el proxy, confirmadas por `next build`:
 
 | Ruta | Render | Qué es |
 |---|---|---|
 | `/` | Estático | La encuesta (wizard de 10 componentes) |
 | `/gracias` | Estático | Confirmación de envío |
 | `/login` | Estático | Canje del token por la cookie de sesión |
-| `/admin` | Estático | Titulares: IMC, participación, indicadores |
-| `/admin/componentes` | Estático | Detalle por componente |
-| `/admin/mapa` | Estático | Matriz de relacionamiento entre áreas |
-| `/admin/cualitativo` | Estático | Respuestas abiertas, agrupables por tema |
-| `/admin/respuestas` | Estático | Listado paginado de respuestas |
-| `/admin/areas/[area]` | Dinámico | Detalle de un área |
+| `/admin` | Estático | Resumen ejecutivo: el diagnóstico en una lectura |
+| `/admin/indices` | Estático | Los ocho índices, sus pesos y el NPS por área |
+| `/admin/componentes` | Estático | Detalle por componente y por área de origen |
+| `/admin/mapa` | Estático | Mapa de relacionamiento: plano, brecha, aspectos y matriz |
+| `/admin/cualitativo` | Estático | Nube de ideas, obstáculos y motivos |
+| `/admin/areas` | Estático | Todas las áreas, por gestión |
+| `/admin/areas/[area]` | Dinámico | Ficha de un área |
+| `/admin/metodologia` | Estático | Fuentes, fórmulas, pesos, semáforo y anonimato |
+| `/admin/respuestas` | Estático | **Monitoreo en vivo** de la recolección y el listado |
 | `/_not-found` | Estático | 404 |
 
 Las rutas de `/admin` se prerenderizan como cascarón estático y traen sus datos en cliente
@@ -63,7 +66,7 @@ con React Query: los datos del panel nunca se cachean (`cache: 'no-store'`), y p
 el cascarón evita mandar HTML vacío mientras llega el primer fetch.
 
 `metadata.robots` está en `{ index: false, follow: false }`
-([layout.tsx:13](src/app/layout.tsx#L13)): es un instrumento interno, no debe indexarse.
+([layout.tsx](src/app/layout.tsx)): es un instrumento interno, no debe indexarse.
 
 ---
 
@@ -72,37 +75,35 @@ el cascarón evita mandar HTML vacío mientras llega el primer fetch.
 ```
 src/
 ├── app/
-│   ├── layout.tsx          html lang="es-CO", Montserrat corporativa, robots noindex
+│   ├── layout.tsx          html lang="es-CO", Geist + Geist Mono, robots noindex
+│   ├── globals.css         tokens de la línea gráfica, paleta de datos, piezas .lk-*
 │   ├── providers.tsx       React Query
 │   ├── page.tsx            la encuesta
 │   ├── login/ gracias/
-│   └── admin/              layout con nav + las 5 vistas del panel
+│   └── admin/              layout con AdminShell + las 9 vistas del panel
 ├── components/
-│   ├── brand/Logo.tsx      logotipo e isotipo, con su versión para fondo oscuro
-│   ├── survey/
-│   │   ├── SurveyWizard.tsx      orquestador
-│   │   ├── useSurveyWizard.ts    estado, autoguardado, navegación
-│   │   ├── wizard-steps.ts       construcción de la secuencia de pasos
-│   │   ├── QuestionRenderer.tsx  despacha al campo según el tipo
-│   │   ├── survey-phases.ts      los 4 bloques y su avance por tramo
-│   │   ├── fields/               los 4 tipos de campo + option-groups.ts
-│   │   ├── PhaseProgress · PhaseBanner · PhaseRoadmap · PhaseIcon · AreaProgress
-│   │   └── ComponentStep · ReviewStep · WelcomeStep · StepShell
+│   ├── brand/Logo.tsx      logotipo e isotipo; versión según el fondo
+│   ├── ui/icons.tsx        iconos de trazo (24 × 24, trazo 1,8)
+│   ├── shell/              AdminShell · SidebarNav · CommandPalette · nav-config
+│   ├── page/PageHeader.tsx cabecera (portada o plana), migas, cifras, acciones, secciones
+│   ├── survey/             el wizard (ver «Los cuatro bloques de color»)
 │   └── charts/             piezas del panel:
-│                           Readout · HeroFigure · IndicatorMeter · PriorityList
-│                           StatStrip · DivergingBars · OpposedBars · OrdinalBars
-│                           IndicesHeatTable · RelationshipMatrixView
-│                           ScoreHeatmapGrid · BarRanking · NpsGauge · RadarIndices
-│                           KpiCard · BandChip · InsufficientData · AdminNav
+│                           ChartCard · DataTable · EnvelopeGate · SidePanel
+│                           PackedBubbles + pack.ts · QuadrantScatter · TimelineChart
+│                           MonitoringCharts (embudo, histograma, calendario)
+│                           IndicatorMeter · BarRanking · DivergingBars · OpposedBars
+│                           OrdinalBars · NpsGauge · RadarIndices · PriorityList
+│                           IndicesHeatTable · RelationshipMatrixView · ScoreHeatmapGrid
 └── lib/
     ├── api.ts              cliente HTTP; credentials: 'include', cache: 'no-store'
     ├── survey-client.ts    endpoints de la encuesta
     ├── admin-client.ts     endpoints del panel
     ├── insights.ts         **el motor de lecturas**: convierte cada payload en una conclusión
-    ├── use-area-names.ts   códigos de área → nombre, desde el catálogo público
+    ├── use-catalog.ts      el organigrama (gestiones y subprocesos) desde el catálogo público
+    ├── use-area-names.ts   códigos de área → nombre
     ├── zod-schema-builder.ts  validación generada desde el catálogo
     ├── draft-storage.ts    puntero del borrador en localStorage
-    ├── score-scale.ts      bandas de color y contraste de tinta
+    ├── score-scale.ts      formato es-CO de cifras y fechas, bandas y velo de matrices
     ├── use-thresholds.ts   umbrales, leídos de la API
     └── proxy.ts            (en src/) chequeo optimista de sesión sobre /admin/*
 ```
@@ -170,81 +171,94 @@ pantalla.
 
 ---
 
-## El panel: seis vistas y una conclusión en cada bloque
+## El panel: la línea gráfica de las herramientas de análisis
 
-### Qué hay en cada una
+Desde el 5-oct-2026 el panel sigue la línea gráfica aprobada por la organización (la de
+*Prospectiva LinkTIC*): menú lateral navy colapsable, buscador ⌘K, portadas navy con retícula,
+tarjetas blancas y Geist. El detalle de tokens, gama y tipografía —y en qué se aparta del
+Manual de Marca— está en [`../docs/MARCA.md`](../docs/MARCA.md).
 
-| Ruta | Nav | Para qué se abre |
+### Qué hay en cada vista
+
+| Ruta | Menú | Para qué se abre |
 |---|---|---|
-| `/admin` | Dashboard | El diagnóstico entero en una lectura de arriba abajo. Es la portada |
-| `/admin/indices` | Índices | De dónde sale cada cifra: pesos del compuesto, NPS por área |
+| `/admin` | Resumen ejecutivo | El diagnóstico entero en una lectura de arriba abajo. Es la portada |
+| `/admin/indices` | Índices | De dónde sale cada cifra: pesos, cuánto le resta cada índice al IMC, NPS por área |
 | `/admin/componentes` | Componentes | Cada componente por separado y cómo cambia según quién responde |
-| `/admin/mapa` | Mapa de relacionamiento | Cómo se evalúan las áreas entre sí |
-| `/admin/cualitativo` | Cualitativo | Lo que la gente señala, con sus palabras |
-| `/admin/respuestas` | Respuestas | Cómo va la recolección y el listado en bruto |
+| `/admin/mapa` | Mapa de relacionamiento | Plano «da/recibe», ranking, aspectos y la matriz en bruto |
+| `/admin/cualitativo` | Cualitativo | La nube de ideas de «qué cambiaría» y lo que marcaron |
+| `/admin/areas` | Todas las áreas | La puerta a cada ficha, por gestión |
+| `/admin/areas/[area]` | (cada subproceso) | Cómo la evalúan, contra el promedio de la empresa |
+| `/admin/metodologia` | Metodología y datos | Fuentes, fórmulas, pesos, semáforo y anonimato |
+| `/admin/respuestas` | Monitoreo en vivo | La recolección mientras está en campo, y el listado |
 
-El antiguo `/admin` se llamaba «Resumen» y mostraba KPIs, radar y NPS. Ese papel lo absorbe
-el dashboard, que además concluye; lo que tenía de propio —cómo se construyen los
-índices— se movió a `/admin/indices`. Ninguna capacidad se perdió.
+### La lectura es el título
 
-### La lectura, que es lo que cambia todo
+Cada tarjeta abre con su **conclusión como título**, y el gráfico va debajo como respaldo;
+debajo del título, una línea dice qué se está mirando, y al pie, plegado, «¿Cómo leer?» con
+el método. Las cabeceras de vista hacen lo mismo: el titular de la portada es la conclusión
+(«La colaboración entre áreas está *en riesgo*: 57,6 sobre 100»), no el nombre de la vista.
+El fragmento destacado con el degradado lo decide el motor de lecturas (`Insight.emphasis`),
+no la pantalla.
 
-Cada bloque abre con su **conclusión escrita** (`Readout`) y pone el gráfico debajo como
-respaldo. El orden inverso —gráfico primero, conclusión si acaso— es lo que hace que un
-panel se mire y no se use.
+Las conclusiones viven en [`lib/insights.ts`](src/lib/insights.ts). Tres reglas que ese
+archivo respeta:
 
-Las conclusiones viven en [`lib/insights.ts`](src/lib/insights.ts), no en las pantallas.
-Tres reglas que ese archivo respeta:
-
-1. **Nunca se afirma más de lo que el dato sostiene.** Si los cinco aspectos caben en
-   cuatro puntos, la lectura dice «van parejos» en vez de coronar un «más flojo» que no
-   existe. Si el mejor índice sigue en riesgo, el titular deja de ser «Lo que sostiene» y
-   pasa a ser «Lo mejor que hay hoy».
-2. **El tono sale de la banda, no de un umbral escrito en el front.** Los umbrales viven en
-   `indicator_thresholds` y un admin los mueve sin desplegar.
+1. **Nunca se afirma más de lo que el dato sostiene.** Si los cinco aspectos caben en cuatro
+   puntos, la lectura dice «van parejos». Si tres cargos empatan arriba, no se corona a uno.
+2. **El tono sale de la banda, no de un umbral escrito en el front.**
 3. **Se nombra el caso concreto.** «Contratación pública es la más exigente» sirve; «hay
    oportunidades de mejora» no.
 
-### El dashboard
+Cada gráfico con más de una lectura posible tiene su **vista de tabla** en el conmutador: es
+el gemelo accesible del gráfico y el lugar del número exacto sin depender del cursor.
 
-Está escrito para alguien que tiene cinco minutos y tiene que decidir algo, así que cuenta
-una historia en orden en vez de ofrecer una rejilla para explorar: cuánto vale la
-colaboración y si el dato se puede tomar en serio → dónde está fuerte y dónde rota, con
-nombre propio → qué se siente al trabajar con otra área → qué señala la gente como el
-problema → qué haría falta hacer. Tiene hoja de estilo de impresión: «Imprimir o guardar en
-PDF» produce un documento, no una captura de una aplicación.
+### El monitoreo en vivo
+
+[`/admin/respuestas`](src/app/admin/respuestas/page.tsx) se refresca sola cada 15 s
+(`refetchInterval`), conserva lo pintado mientras llega el corte nuevo y dice cuándo se
+actualizó. Lee `GET /admin/monitoring`, que **no pasa por la cohorte mínima**: mide
+participación, no opinión. Contesta, en orden:
+
+| Pregunta | Forma |
+|---|---|
+| ¿Llega gente? | Curva acumulada de iniciadas y completas (o columnas por día); la distancia entre curvas es el abandono |
+| ¿Hasta dónde llega? | Embudo por componente, agrupado por bloque, con la caída más grande destacada |
+| ¿Cuánto tarda? | Histograma de duración con la marca de los 15 minutos prometidos |
+| ¿Qué áreas faltan? | **Burbujas empaquetadas** por área (tamaño = completas; color = si alcanza la cohorte), con panel de detalle |
+| ¿Qué niveles faltan? | Barras por cargo |
+| ¿Cuándo responde la gente? | Calendario día × hora (hora de Bogotá) |
+
+Las burbujas son la forma de la línea gráfica de referencia para respuestas en vivo. El
+empaquetado es el algoritmo de cadena frontal de d3 (`packSiblings`), reescrito en
+[`pack.ts`](src/components/charts/pack.ts) para no sumar una dependencia; el área —no el
+radio— es proporcional al valor. La misma pieza arma la **nube de ideas** de Cualitativo,
+donde las respuestas abiertas se juntan por tema (o por texto idéntico) y se clasifican en
+bloque desde el panel de detalle.
 
 ### Las formas, y por qué cada una
 
 | Dato | Forma | Por qué |
 |---|---|---|
-| Un índice 0-100 | **Medidor** con la pista completa y los cortes de banda marcados | Se lee cuánto falta, no solo quién va delante. Un 62 y un 58 se ven casi iguales, y son bandas distintas |
-| La brecha de percepción | **Barras divergentes** sobre un cero | Es polaridad: ningún extremo es «bueno». Una tabla de números con signo obliga a leer fila por fila para hallar los extremos |
-| Motivos del NPS | **Barras enfrentadas** | Un motivo que pesa en los dos lados es la señal más útil del instrumento, y en dos listas separadas hay que ir y venir para verla |
-| Tramos de tiempo de respuesta | **Rampa ordinal**, un tono en pasos de luminancia | Las categorías tienen orden natural; cinco colores distintos dirían que son cosas independientes |
-| Matrices de áreas | **Velo** del color de banda, no el color a plena carga | 24 × 24 bloques saturados se leen como ruido y aplastan el número, que es el dato |
-| La cifra de portada | **Hero** sin `tabular-nums` | A ese tamaño los dígitos de ancho fijo dejan huecos |
+| Un índice 0-100 | **Medidor** con los tramos del semáforo pintados en la pista | Se lee cuánto falta, no solo quién va delante |
+| Áreas por lo que dan y reciben | **Plano** cortado por medianas, con la diagonal «da lo mismo que recibe» | Dos medidas a la vez; los cuadrantes nombran el perfil |
+| La brecha, el NPS por área | **Barras divergentes** sobre un cero | Es polaridad: ningún extremo es «bueno» |
+| Motivos del NPS | **Barras enfrentadas** | Un motivo que pesa en los dos lados es la señal más útil |
+| Aspectos de un área | **Medidor con marca de referencia** (promedio de la empresa) | Se ve de inmediato dónde queda por debajo de lo típico |
+| Lo que resta cada índice al IMC | **Barras** de peso × (100 − valor) | El que más resta no siempre es el más bajo |
+| Cumplimiento del ANS | **Rampa ordinal** | Las categorías tienen orden natural |
+| Matrices de áreas | **Velo** del color de banda | 24 × 24 bloques saturados aplastan el número |
 
 ### Color: lo que está verificado
 
-Las paletas no se eligieron a ojo. Lo medible se midió:
+La paleta de datos es la de la referencia y se validó con el procedimiento de seis controles
+(banda de luminancia, croma, separación con protanopia y deuteranopia, separación con visión
+normal, contraste). La rampa ordinal pasa los controles ordinales (luminancia monótona,
+ΔL ≥ 0,06, extremo claro 2,1:1); el par divergente azul/rojo da ΔE 21,6 con protanopia.
 
-- **Rampa ordinal** (tiempos de respuesta): luminancia monótona, saltos ΔL ≥ 0,06 y el
-  extremo más cercano a la superficie por encima de 2:1, con juegos propios para claro y
-  oscuro. El anclaje se invierte en oscuro porque el extremo que debe despegarse del fondo
-  es el contrario.
-- **Par divergente** (brecha, motivos): frío contra cálido, ΔE 25,9 con protanopia y 27,9
-  con visión normal. Dos fríos no se leerían como opuestos.
-- **Velo de las matrices**: en claro la luminancia baja de forma monótona con la severidad
-  y el texto rinde ≥ 5,1:1; en oscuro ≥ 7,8:1.
-
-**Las cuatro bandas del semáforo NO se distinguen entre sí por color a secas.** Medido:
-«En riesgo» contra «Aceptable» dan ΔE 5,5 con deuteranopia, y «Crítico» contra «En riesgo»
-ΔE 10,0 incluso con visión normal, por debajo del piso de 15. Los colores llegan de la base
-de datos y son del cliente, así que no se cambian — lo que se hace es no depender de ellos:
-la banda va siempre con su etiqueta escrita, cada celda de matriz lleva su número, y los
-dos lados de un gráfico enfrentado se distinguen por el lado y por la palabra del
-encabezado, nunca por verde contra rojo (ese par colapsa a ΔE 4,5).
+**Las cuatro bandas del semáforo siguen sin distinguirse entre sí por color a secas.** Los
+colores llegan de la base de datos y son del cliente, así que no se cambian — lo que se hace
+es no depender de ellos: la banda va siempre con su etiqueta escrita.
 
 ---
 
@@ -256,7 +270,7 @@ donde conviene que cambie el tono:
 
 | Bloque | Componentes | Color | Qué se pide |
 |---|---|---|---|
-| 1 · Relacionamiento | 1-2 | azul `#0061c2` | calificar áreas concretas, una por una |
+| 1 · Relacionamiento | 1-2 | azul `#0a6cb1` | calificar áreas concretas, una por una |
 | 2 · Cómo funciona la empresa | 3-6 | teal `#0d6d5f` | calificar la operación: comunicación, servicio, tiempos, roles |
 | 3 · Cultura | 7-8 | verde `#12690a` | cómo nos tratamos, aprendemos e innovamos |
 | 4 · Qué debemos cambiar | 9-10 | ámbar `#8a5300` | qué recomendaría y qué hay que arreglar |
@@ -266,8 +280,8 @@ contiguo a propósito — un bloque partido haría que el color fuera y volviera
 señal contraria a la que sirve.
 
 El color no vive solo en la barra de progreso. Tiñe el título del componente, la cinta de
-fase, el botón de continuar y la casilla marcada de la escala 0-10, así que al cambiar de
-bloque cambia el tono de toda la pantalla.
+fase, el botón de continuar, la casilla marcada de la escala 0-10 y el filete superior de la
+tarjeta, así que al cambiar de bloque cambia el tono de toda la pantalla.
 
 ### Cómo está cableado
 
@@ -279,10 +293,8 @@ recibe el color por props: `ScaleField` no sabe en qué bloque está.
 Fuera de un `[data-phase]` los tokens valen lo mismo que la marca, que es lo que necesitan
 la bienvenida y la revisión.
 
-`--phase-on` es la tinta que va encima de un plano de fase relleno. En claro es blanco; en
-oscuro los cuatro tonos son brillantes y el blanco encima daría 1,5:1 sobre el ámbar, así
-que ahí la tinta es el carbón del fondo. Los cuatro tonos claros dan entre 6,0:1 y 6,9:1
-sobre blanco, y los cuatro oscuros entre 5,1:1 y 9,8:1 sobre la superficie oscura.
+`--phase-on` es la tinta que va encima de un plano de fase relleno: blanco. Las cuatro
+tintas dan entre 5,5:1 y 6,9:1 sobre blanco.
 
 ### Qué sostiene el recorrido
 
@@ -343,8 +355,11 @@ consulte la guía correspondiente en `node_modules/next/dist/docs/` — lo indic
 - `middleware.ts` → **`proxy.ts`**, exportando `proxy()` en vez de `middleware()`
 - Tipos de ruta generados: `LayoutProps<'/'>`, `PageProps<…>` vía `next typegen`
 - Tailwind CSS 4 con **configuración CSS-first**: no hay `tailwind.config.js`, los tokens
-  viven en [`globals.css`](src/app/globals.css) — y salen del Manual de Marca, según
-  [`../docs/MARCA.md`](../docs/MARCA.md)
+  viven en [`globals.css`](src/app/globals.css) — y salen de la línea gráfica aprobada,
+  según [`../docs/MARCA.md`](../docs/MARCA.md)
+- En Tailwind 4 los utilitarios viven en una capa, y **una regla sin capa les gana
+  siempre**. La base del sistema va en `@layer base` y las piezas `.lk-*` en
+  `@layer components`; una regla global nueva fuera de capa anularía los utilitarios
 
 ---
 
@@ -373,7 +388,7 @@ dominio del back haría que el navegador rechace la cookie. El detalle está en
 npm run typecheck && npm run lint && npm run build
 ```
 
-Estado al 14-ago-2026: los tres pasan — 9 rutas más el proxy.
+Estado al 5-oct-2026: los tres pasan — 11 rutas más el proxy.
 
-Este proyecto **no tiene tests automatizados**; la batería de 145 tests vive en `dev-back`,
+Este proyecto **no tiene tests automatizados**; la batería de 182 tests vive en `dev-back`,
 donde están las fórmulas y las reglas del instrumento.

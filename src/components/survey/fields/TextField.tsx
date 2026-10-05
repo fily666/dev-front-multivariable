@@ -15,7 +15,7 @@ export function TextField({ question, value, onChange, error, disabled }: FieldP
         disabled={disabled}
         aria-invalid={error ? true : undefined}
         onChange={(event) => onChange({ kind: 'text', value: event.target.value })}
-        className="resize-y rounded-lg border border-border-subtle bg-surface px-4 py-3 text-sm text-foreground placeholder:text-foreground-muted"
+        className="resize-y rounded-xl border border-border-strong bg-white px-4 py-3 text-sm text-foreground placeholder:text-foreground-subtle focus-visible:border-lk-blue focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-lk-blue/15"
         placeholder="Escriba su respuesta"
       />
       <div className="flex justify-between text-xs text-foreground-muted">

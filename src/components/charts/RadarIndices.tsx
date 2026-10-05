@@ -10,10 +10,11 @@ import {
   Tooltip,
 } from 'recharts';
 import type { RadarPoint } from '@/lib/admin.types';
+import { formatIndex } from '@/lib/score-scale';
 import { EmptyState } from './InsufficientData';
 
 /** Una sola serie: el perfil de la organización. Sin leyenda — el título la nombra. */
-const SERIES_COLOR = 'var(--brand-accent)';
+const SERIES_COLOR = 'var(--series-1)';
 
 export function RadarIndices({ points }: { points: RadarPoint[] }) {
   const withData = points.filter((point) => point.value !== null);
@@ -38,10 +39,10 @@ export function RadarIndices({ points }: { points: RadarPoint[] }) {
           outerRadius="62%"
           margin={{ top: 16, right: 72, bottom: 16, left: 72 }}
         >
-          <PolarGrid stroke="var(--border)" />
+          <PolarGrid stroke="var(--chart-grid)" />
           <PolarAngleAxis
             dataKey="label"
-            tick={{ fill: 'var(--foreground-muted)', fontSize: 11 }}
+            tick={{ fill: 'var(--foreground-muted)', fontSize: 12 }}
           />
           {/* Escala fija 0-100: dejarla automática haría que dos cortes distintos no se
               puedan comparar visualmente.
@@ -56,22 +57,26 @@ export function RadarIndices({ points }: { points: RadarPoint[] }) {
             stroke={SERIES_COLOR}
             strokeWidth={2}
             fill={SERIES_COLOR}
-            fillOpacity={0.18}
+            fillOpacity={0.12}
+            dot={{ r: 4, fill: SERIES_COLOR, stroke: '#fff', strokeWidth: 2 }}
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 8,
+              backgroundColor: 'var(--lk-navy-900)',
+              border: 'none',
+              borderRadius: 12,
               fontSize: 12,
-              color: 'var(--foreground)',
+              color: '#fff',
+              boxShadow: '0 12px 32px -12px #06142b99',
             }}
+            itemStyle={{ color: '#fff' }}
+            labelStyle={{ color: '#cbd5e1' }}
             formatter={(value, _name, item) => {
               const payload = item?.payload as
                 | { band: string; hasData: boolean }
                 | undefined;
               if (!payload?.hasData) return ['Sin dato', ''];
-              return [`${String(value)} · ${payload.band}`, 'Índice'];
+              return [`${formatIndex(Number(value), 1)} · ${payload.band}`, 'Índice'];
             }}
           />
         </RadarChart>

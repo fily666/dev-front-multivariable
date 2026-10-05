@@ -184,6 +184,54 @@ export interface IndicesByAreaPayload {
   suppressed: number;
 }
 
+/**
+ * Monitoreo de la recolección (`GET /admin/monitoring`). Es participación, no opinión: no
+ * pasa por la cohorte mínima, porque se mira justo cuando hay pocas respuestas.
+ */
+export interface MonitoringPayload {
+  timezone: 'America/Bogota';
+  totals: {
+    started: number;
+    completed: number;
+    drafts: number;
+    /** Borradores con actividad en los últimos 30 minutos: gente respondiendo ahora. */
+    activeNow: number;
+    /** Borradores sin actividad hace más de 24 horas. */
+    stalled: number;
+    completionRate: number | null;
+    population: number | null;
+    participationRate: number | null;
+    medianDurationSeconds: number | null;
+    completedToday: number;
+    lastSubmittedAt: string | null;
+    lastActivityAt: string | null;
+  };
+  timeline: {
+    date: string;
+    started: number;
+    completed: number;
+    cumulativeStarted: number;
+    cumulativeCompleted: number;
+  }[];
+  /** weekday 0 = lunes … 6 = domingo. Solo celdas con al menos un envío. */
+  heatmap: { weekday: number; hour: number; completed: number }[];
+  funnel: { componentId: number; title: string; reached: number }[];
+  dropOff: { componentId: number; title: string; drafts: number }[];
+  durations: { label: string; minSeconds: number; maxSeconds: number | null; count: number }[];
+  byArea: {
+    areaCode: string;
+    areaName: string;
+    procesoCode: string | null;
+    procesoName: string | null;
+    completed: number;
+    drafts: number;
+    headcount: number | null;
+    participationRate: number | null;
+  }[];
+  byRole: { value: string; label: string; completed: number; drafts: number }[];
+  unidentified: number;
+}
+
 export interface AdminFilters {
   campaignId?: string;
   ownArea?: string;

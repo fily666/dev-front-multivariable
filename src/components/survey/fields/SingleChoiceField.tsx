@@ -39,11 +39,11 @@ export function SingleChoiceField({
           })
         }
         className={[
-          'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors',
+          'flex w-full min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors',
           'disabled:cursor-not-allowed disabled:opacity-50',
           isSelected
             ? 'border-phase bg-phase-subtle text-foreground'
-            : 'border-border-subtle bg-surface text-foreground hover:border-phase',
+            : 'border-border-subtle bg-white text-foreground hover:border-phase hover:bg-phase-subtle/40',
         ].join(' ')}
       >
         <span
@@ -87,7 +87,7 @@ export function SingleChoiceField({
               otherText: event.target.value,
             })
           }
-          className="max-w-md rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-sm text-foreground placeholder:text-foreground-muted"
+          className="min-h-11 max-w-md rounded-xl border border-border-strong bg-white px-4 text-sm text-foreground placeholder:text-foreground-subtle focus-visible:border-lk-blue focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-lk-blue/15"
         />
       )}
 

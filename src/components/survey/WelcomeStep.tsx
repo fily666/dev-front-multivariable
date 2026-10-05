@@ -23,7 +23,7 @@ const RESPONSE_TYPES = [
 ];
 
 const SELECT_CLASS =
-  'rounded-lg border border-border-subtle bg-surface px-4 py-2.5 text-foreground';
+  'min-h-12 rounded-xl border border-border-strong bg-white px-4 text-foreground transition-shadow focus-visible:border-lk-blue focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-lk-blue/15';
 
 export function WelcomeStep({
   schema,
@@ -52,14 +52,14 @@ export function WelcomeStep({
   return (
     <section className="flex flex-col gap-7" aria-labelledby="welcome-title">
       <header className="flex flex-col gap-3">
-        <LinkticLogo width={200} priority className="mb-3" />
-        <p className="text-xs font-medium uppercase tracking-wide text-brand">
+        <LinkticLogo width={170} priority className="mb-2" />
+        <p className="lk-kicker text-xs font-semibold uppercase tracking-[0.16em] text-foreground-muted">
           Encuesta interna de percepción organizacional
         </p>
-        <h1 id="welcome-title" className="text-2xl text-foreground sm:text-3xl">
+        <h1 id="welcome-title" className="lk-text-gradient max-w-3xl text-[2rem] leading-[1.1] sm:text-[2.6rem]">
           Instrumento de Diagnóstico Organizacional
         </h1>
-        <p className="max-w-prose text-sm leading-relaxed text-foreground-muted">
+        <p className="max-w-prose text-[15px] leading-relaxed text-foreground-muted">
           Este instrumento tiene como propósito comprender la forma en que interactúan las
           áreas de la organización, identificar fortalezas y oportunidades de mejora en la
           colaboración interna, y generar información estratégica para fortalecer la
@@ -67,7 +67,8 @@ export function WelcomeStep({
         </p>
       </header>
 
-      <div className="rounded-lg bg-brand-subtle px-4 py-3">
+      <div className="flex items-start gap-3 rounded-xl bg-brand-subtle px-4 py-3">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mt-0.5 shrink-0 text-brand"><path d="M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z M9 12l2 2 4-4" /></svg>
         <p className="text-sm text-foreground">
           La información recopilada será utilizada exclusivamente con fines de mejora
           organizacional y fortalecimiento institucional.
@@ -83,8 +84,8 @@ export function WelcomeStep({
        */}
       <div className="grid gap-7 lg:grid-cols-2 lg:items-start lg:gap-x-10">
         <div className="flex flex-col gap-3">
-          <h2 className="text-sm text-foreground">Cómo se responde</h2>
-          <ul className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface-muted p-4">
+          <h2 className="text-[15px] text-foreground">Cómo se responde</h2>
+          <ul className="flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-sunken p-4">
             {RESPONSE_TYPES.map(([type, use]) => (
               <li key={type} className="flex flex-col gap-0.5 text-sm sm:flex-row sm:gap-3">
                 <span className="font-medium text-foreground sm:w-40 sm:shrink-0">{type}</span>
@@ -96,7 +97,7 @@ export function WelcomeStep({
 
         <div className="flex flex-col gap-4 border-t border-border-subtle pt-6 lg:border-t-0 lg:pt-0">
           <div className="flex flex-col gap-1">
-            <h2 className="text-sm text-foreground">Identificación</h2>
+            <h2 className="text-[15px] text-foreground">Identificación</h2>
             <p className="text-xs text-foreground-muted">
               La encuesta es anónima: no se pide su nombre. El área y el cargo son necesarios
               para leer los resultados por proceso y por nivel.
@@ -162,7 +163,7 @@ export function WelcomeStep({
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg bg-danger-subtle px-4 py-3 text-sm text-danger">
+        <p role="alert" className="rounded-xl bg-danger-subtle px-4 py-3 text-sm text-danger">
           {error}
         </p>
       )}
@@ -171,9 +172,14 @@ export function WelcomeStep({
         type="button"
         onClick={onStart}
         disabled={busy}
-        className="self-start rounded-lg bg-brand px-6 py-3 text-sm font-bold text-white hover:bg-brand-hover disabled:opacity-60"
+        className="lk-button inline-flex min-h-12 items-center gap-2 self-start rounded-xl px-7 text-[15px] font-semibold"
       >
         {busy ? 'Preparando…' : 'Empezar el bloque 1'}
+        {!busy && (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M5 12h14 M13 6l6 6-6 6" />
+          </svg>
+        )}
       </button>
     </section>
   );
