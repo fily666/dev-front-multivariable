@@ -9,8 +9,9 @@ export interface OptionGroup {
 
 /**
  * Parte las opciones en los grupos que declara el catálogo, conservando el orden en que
- * llegaron. Las áreas vienen agrupadas por gestión: 24 subprocesos en una lista plana son
- * ilegibles, y la gestión es justamente la pista que el encuestado usa para ubicarse.
+ * llegaron. Las áreas vienen agrupadas por gestión: más de cincuenta subprocesos en una
+ * lista plana son ilegibles, y la gestión es justamente la pista que el encuestado usa para
+ * ubicarse.
  *
  * Las opciones sin grupo (las estáticas, como "Ninguna") caen en un grupo sin título al
  * final, para que nunca queden escondidas bajo un encabezado que no les corresponde.

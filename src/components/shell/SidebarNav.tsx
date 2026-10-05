@@ -12,9 +12,9 @@ import { ANALYSIS_NAV, AREAS_INDEX, OPERATION_NAV, isActive, type NavItem } from
  * La navegación del panel, compartida por el menú lateral y el cajón móvil.
  *
  * Tres tramos, como en la línea gráfica de referencia: el análisis de la empresa, las
- * áreas (agrupadas por gestión, igual que en la encuesta: con 24 subprocesos la gestión es
- * la pista con la que cada quien se ubica) y la operación. `collapsed` deja solo los
- * iconos; el nombre sigue ahí para el lector de pantalla y en el `title`.
+ * áreas (agrupadas por gestión, igual que en la encuesta: con más de cincuenta subprocesos
+ * la gestión es la pista con la que cada quien se ubica) y la operación. `collapsed` deja
+ * solo los iconos; el nombre sigue ahí para el lector de pantalla y en el `title`.
  */
 export function SidebarNav({
   collapsed = false,

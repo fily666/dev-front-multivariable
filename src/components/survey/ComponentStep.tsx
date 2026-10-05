@@ -37,7 +37,7 @@ export function ComponentStep({
 }: ComponentStepProps) {
   // La relación principal no se pinta como pregunta aparte: es una estrella sobre las
   // áreas que se acaban de marcar en 1.1. Preguntarla en un bloque propio obligaría a
-  // releer la lista de 24 subprocesos para repetir una de las cinco ya elegidas.
+  // releer la lista de subprocesos para repetir una de las cinco ya elegidas.
   const primaryEntry = entries.find(
     (entry) => entry.question.code === PRIMARY_AREA_QUESTION,
   );

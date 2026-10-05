@@ -35,9 +35,9 @@ export function WelcomeStep({
   error,
 }: WelcomeStepProps) {
   /**
-   * Las áreas se ofrecen agrupadas por gestión. Con 24 subprocesos, una lista plana
-   * obliga a leerla entera para encontrar el propio; la gestión es la pista con la que
-   * cada persona se ubica primero.
+   * Las áreas se ofrecen agrupadas por gestión. Con más de cincuenta subprocesos, una lista
+   * plana obliga a leerla entera para encontrar el propio; la gestión es la pista con la
+   * que cada persona se ubica primero.
    */
   const areasPorGestion = useMemo(() => {
     const evaluables = schema.areas.filter((area) => area.isEvaluable);

@@ -23,13 +23,15 @@ export function RelationshipMatrixView({ payload, bands }: Props) {
 
   if (map.cells.length === 0) {
     // «No hay evaluaciones» y «las hay pero están todas ocultas» son cosas distintas, y
-    // con 24 subprocesos la segunda es la normal: 552 pares posibles contra una cohorte
-    // mínima de 4 deja casi todas las celdas por debajo del umbral.
+    // con más de cincuenta subprocesos la segunda es la normal: miles de pares posibles
+    // contra una cohorte mínima de 4 deja casi todas las celdas por debajo del umbral.
+    // Las cifras salen del catálogo, para que no envejezcan con el próximo organigrama.
+    const pairs = areas.length * (areas.length - 1);
     return (
       <EmptyState
         message={
           suppressedCells > 0
-            ? `Las ${suppressedCells} relaciones evaluadas están ocultas: ninguna pareja de áreas alcanza todavía la cohorte mínima. Con 24 subprocesos hay 552 parejas posibles, así que este corte se lee mejor por gestión que par a par.`
+            ? `Las ${suppressedCells} relaciones evaluadas están ocultas: ninguna pareja de áreas alcanza todavía la cohorte mínima. Con ${areas.length} subprocesos hay ${pairs.toLocaleString('es-CO')} parejas posibles, así que este corte se lee mejor por gestión que par a par.`
             : 'Todavía no hay evaluaciones entre áreas para construir la matriz.'
         }
       />
@@ -107,8 +109,8 @@ export function RelationshipMatrixView({ payload, bands }: Props) {
 
                   return (
                     <td key={target.code} className="p-0.5">
-                      {/* Velo del color de banda, no el color a plena carga: con 24 áreas
-                          la cuadrícula entera en bloques saturados se vuelve ilegible. */}
+                      {/* Velo del color de banda, no el color a plena carga: con decenas de
+                          áreas la cuadrícula entera en bloques saturados se vuelve ilegible. */}
                       <div
                         className="rounded px-2 py-2 text-center text-foreground"
                         style={heatFill(band, bands)}

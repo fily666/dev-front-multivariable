@@ -131,7 +131,7 @@ total de pasos dependa de cuántas áreas eligió el encuestado en la pregunta 1
 **Las opciones de área se agrupan solas por gestión.** El backend manda cada opción con su
 grupo (`option.group`), así que `MultiChoiceField` y `SingleChoiceField` pintan los
 encabezados sin saber nada del organigrama
-([option-groups.ts](src/components/survey/fields/option-groups.ts)). Con 24 subprocesos una
+([option-groups.ts](src/components/survey/fields/option-groups.ts)). Con 53 subprocesos una
 lista plana obliga a leerla entera; la gestión es la pista con la que cada persona se ubica.
 
 **Dos excepciones al wizard genérico, ambas del componente 1.** La identificación (área y
@@ -139,7 +139,7 @@ cargo) vive en el paso de bienvenida y no en el catálogo de preguntas, porque c
 lo que sigue. Y `c1_area_principal` —la relación principal— no se pinta como bloque propio:
 es una estrella sobre las áreas que se acaban de marcar en 1.1
 ([ComponentStep.tsx](src/components/survey/ComponentStep.tsx)). Preguntarla aparte obligaría
-a releer 24 subprocesos para repetir una de las cinco ya elegidas.
+a releer 53 subprocesos para repetir una de las cinco ya elegidas.
 
 **La validación del cliente se genera desde el schema del servidor.**
 [`zod-schema-builder.ts`](src/lib/zod-schema-builder.ts) construye las reglas desde el
@@ -285,7 +285,7 @@ entera.
 | Aspectos de un área | **Medidor con marca de referencia** (promedio de la empresa) | Se ve de inmediato dónde queda por debajo de lo típico |
 | Lo que resta cada índice al IMC | **Barras** de peso × (100 − valor) | El que más resta no siempre es el más bajo |
 | Cumplimiento del ANS | **Rampa ordinal** | Las categorías tienen orden natural |
-| Matrices de áreas | **Velo** del color de banda | 24 × 24 bloques saturados aplastan el número |
+| Matrices de áreas | **Velo** del color de banda | 53 × 53 bloques saturados aplastan el número |
 
 ### Color: lo que está verificado
 
@@ -356,15 +356,16 @@ Lo que evita que la encuesta se abandone a la mitad, en orden de peso:
 ### Pendiente: el componente 10 es la pantalla más larga
 
 Tal como está, el componente 10 monta en una sola pantalla tres preguntas de selección
-única sobre el catálogo completo de 24 subprocesos. Medida en el recorrido real: **unos
-5.600 px de alto**, contra los ~1.400 de una pantalla de escalas. Es justo la última, donde
-menos conviene. Dos salidas, ninguna aplicada todavía porque cambian el instrumento o la
+única sobre el catálogo completo de subprocesos. Medida en el recorrido real, cuando eran 24:
+**unos 5.600 px de alto**, contra los ~1.400 de una pantalla de escalas. Con los 53 de la
+distribución del 5-oct-2026 crece en proporción —no se ha vuelto a medir—, y es justo la
+última, donde menos conviene. Dos salidas, ninguna aplicada todavía porque cambian el instrumento o la
 secuencia de pasos:
 
 - Partir el componente 10 en dos pasos. Toca la semántica de `lastStep`, que hoy es el id
   del componente.
 - Rendir las preguntas de selección única con muchas opciones como `<select>` agrupado por
-  gestión, en vez de 24 botones. Pierde objetivo táctil, gana pantalla.
+  gestión, en vez de 53 botones. Pierde objetivo táctil, gana pantalla.
 
 ---
 

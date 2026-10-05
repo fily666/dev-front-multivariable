@@ -8,7 +8,8 @@ import { getSchema } from './survey-client';
  *
  * Varios endpoints de analítica devuelven el código en crudo —`CONTRATACION_PUBLICA`—
  * porque su cálculo trabaja con códigos. Mostrarlo así obliga al lector a traducir de
- * memoria un catálogo de 24 subprocesos, que es justo lo que un panel no debe pedir.
+ * memoria un catálogo de más de cincuenta subprocesos, que es justo lo que un panel no
+ * debe pedir.
  *
  * Sale del catálogo público de la encuesta, que ya trae el árbol completo con nombres, y
  * se cachea largo: el catálogo solo cambia cuando cambia el organigrama.

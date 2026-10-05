@@ -15,7 +15,7 @@ export interface Gestion {
 }
 
 /**
- * El organigrama tal como lo trae el catálogo público: 12 gestiones y sus subprocesos.
+ * El organigrama tal como lo trae el catálogo público: las gestiones y sus subprocesos.
  *
  * Lo usan el menú lateral, el buscador y las migas de pan de la ficha de área. Sale del
  * mismo `GET /survey/schema` que dirige la encuesta —y que `useAreaNames` ya cachea—, así
