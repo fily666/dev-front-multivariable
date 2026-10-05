@@ -3,7 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { getIndicators, getNps } from '@/lib/admin-client';
 import { compositeInsight, npsInsight, priorities, radarInsight, toneOfBand } from '@/lib/insights';
+import { useAnalysisFilters } from '@/lib/filters-store';
 import { formatDateTime, formatIndex, formatNps, formatNumber } from '@/lib/score-scale';
+import { FilterBar } from '@/components/page/FilterBar';
 import {
   HowToReadButton,
   InsightTitle,
@@ -31,8 +33,9 @@ import { RadarIndices } from '@/components/charts/RadarIndices';
  * cuánto le resta cada índice y el NPS desagregado por área.
  */
 export default function IndicesPage() {
-  const query = useQuery({ queryKey: ['indicators'], queryFn: () => getIndicators() });
-  const nps = useQuery({ queryKey: ['nps'], queryFn: () => getNps() });
+  const { apiFilters } = useAnalysisFilters();
+  const query = useQuery({ queryKey: ['indicators', apiFilters], queryFn: () => getIndicators(apiFilters) });
+  const nps = useQuery({ queryKey: ['nps', apiFilters], queryFn: () => getNps(apiFilters) });
   const data = query.data?.data ?? null;
   const titular = data ? compositeInsight(data.radar, data.weights) : null;
 
@@ -105,6 +108,7 @@ export default function IndicesPage() {
       />
 
       <PageBody>
+        <FilterBar />
         <EnvelopeGate query={query} loading={<LoadingCard height={360} />}>
           {(ind) => {
             const pesos = new Map(ind.weights.map((weight) => [weight.indicatorCode, weight.weight]));

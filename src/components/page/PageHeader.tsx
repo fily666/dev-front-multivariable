@@ -208,8 +208,10 @@ export interface StatItem {
  * huecos y un «11» se ve suelto.
  */
 export function StatGrid({ items, onDark }: { items: StatItem[]; onDark?: boolean }) {
+  // Dos por fila desde el teléfono: cuatro cifras apiladas en una columna empujan el
+  // contenido dos pantallas más abajo.
   const columns =
-    items.length >= 4 ? 'sm:grid-cols-2 xl:grid-cols-4' : items.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2';
+    items.length >= 4 ? 'grid-cols-2 xl:grid-cols-4' : items.length === 3 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2';
 
   return (
     <dl className={clsx('lk-escalonado grid gap-3', columns)}>
@@ -217,13 +219,13 @@ export function StatGrid({ items, onDark }: { items: StatItem[]; onDark?: boolea
         <div
           key={item.label}
           className={clsx(
-            'flex min-h-[124px] flex-col gap-1 rounded-2xl px-5 py-4',
+            'flex min-h-[112px] min-w-0 flex-col gap-1 rounded-2xl px-4 py-3.5 sm:min-h-[124px] sm:px-5 sm:py-4',
             onDark ? 'lk-vidrio' : 'lk-tarjeta',
           )}
         >
           <dd
             className={clsx(
-              'flex flex-wrap items-baseline gap-x-1.5 text-[2rem] font-semibold leading-tight tracking-tight',
+              'flex flex-wrap items-baseline gap-x-1.5 text-[1.6rem] font-semibold leading-tight tracking-tight sm:text-[2rem]',
               onDark ? 'text-white' : 'text-foreground',
             )}
           >

@@ -26,7 +26,7 @@ export function ScoreHeatmapGrid({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[620px] border-collapse text-sm">
           <caption className="sr-only">
             Calificación de cada aspecto de la red de colaboración, por área evaluada

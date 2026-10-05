@@ -13,6 +13,12 @@ export interface ScatterPoint {
   /** Para destacar con rótulo las más extremas; el orden lo decide quien llama. */
   emphasis?: number;
   href?: string;
+  /** Color del punto; sin él, el tono 1. Lo usa quien codifica una banda en el punto. */
+  color?: string;
+  /** Punto hueco: el dato existe pero está incompleto (la vista explica por qué). */
+  hollow?: boolean;
+  /** Filas extra del tooltip, después de las dos medidas. */
+  detail?: { value: string; label: string }[];
 }
 
 interface Quadrant {
@@ -50,6 +56,13 @@ export function QuadrantScatter({
   height = 440,
   labelCount = 6,
   onSelect,
+  scales,
+  formatX = (value: number) => formatNumber(value, 1),
+  formatY = (value: number) => formatNumber(value, 1),
+  emptyMessage = 'Hacen falta al menos dos áreas con los dos lados medidos para dibujar el plano.',
+  selectHint = 'Clic para abrir la ficha',
+  cut,
+  neutralVeils = false,
 }: {
   points: ScatterPoint[];
   xLabel: string;
@@ -59,41 +72,81 @@ export function QuadrantScatter({
   height?: number;
   labelCount?: number;
   onSelect?: (point: ScatterPoint) => void;
+  /**
+   * Qué mide cada eje. Sin esto los dos comparten la misma escala 0-100 (lo que da y lo que
+   * recibe un área), que es lo que hace legible la diagonal. Con medidas distintas
+   * —menciones contra un índice— cada eje se ajusta a lo suyo: un índice se recorta a su
+   * tramo útil de diez en diez; un conteo arranca en cero.
+   */
+  scales?: { x: 'index' | 'count'; y: 'index' | 'count' };
+  formatX?: (value: number) => string;
+  formatY?: (value: number) => string;
+  emptyMessage?: string;
+  selectHint?: string;
+  /**
+   * Dónde se corta el plano. Sin esto, en las medianas. El análisis estructural corta en
+   * las medias, y las nombra así.
+   */
+  cut?: { x: number; y: number; label: string };
+  /**
+   * Velos de cuadrante todos neutros. Por defecto el de arriba a la derecha se tiñe de
+   * azul (bueno en las dos medidas) y el de abajo a la izquierda de rojo; en un plano sin
+   * cuadrante «bueno», como motricidad contra dependencia, ese tinte diría algo falso.
+   */
+  neutralVeils?: boolean;
 }) {
   const { ref, width } = useMeasure<HTMLDivElement>();
   const [hover, setHover] = useState<string | null>(null);
 
-  const domain = useMemo(() => {
-    if (points.length === 0) return { min: 0, max: 100 };
-    const values = points.flatMap((point) => [point.x, point.y]);
-    const lo = Math.max(0, Math.floor((Math.min(...values) - 5) / 10) * 10);
-    const hi = Math.min(100, Math.ceil((Math.max(...values) + 5) / 10) * 10);
-    return { min: lo, max: Math.max(hi, lo + 20) };
-  }, [points]);
+  const domains = useMemo(() => {
+    const indexDomain = (values: number[]) => {
+      if (values.length === 0) return { min: 0, max: 100, step: 10 };
+      const lo = Math.max(0, Math.floor((Math.min(...values) - 5) / 10) * 10);
+      const hi = Math.min(100, Math.ceil((Math.max(...values) + 5) / 10) * 10);
+      return { min: lo, max: Math.max(hi, lo + 20), step: 10 };
+    };
+    /**
+     * Un conteo arranca en cero y termina en un número redondo, con pasos enteros: un eje de
+     * conteos en 2,5 en 2,5 escribiría «3» donde dice 2,5.
+     */
+    const countDomain = (values: number[]) => {
+      const max = Math.max(...values, 1);
+      const rough = max / 5;
+      const magnitude = 10 ** Math.floor(Math.log10(rough));
+      const step = Math.max(1, [1, 2, 5, 10].map((m) => m * magnitude).find((candidate) => candidate >= rough) ?? magnitude * 10);
+      return { min: 0, max: Math.ceil(max / step) * step, step };
+    };
+    const xs = points.map((point) => point.x);
+    const ys = points.map((point) => point.y);
+    if (!scales) {
+      const shared = indexDomain([...xs, ...ys]);
+      return { x: shared, y: shared };
+    }
+    return {
+      x: scales.x === 'index' ? indexDomain(xs) : countDomain(xs),
+      y: scales.y === 'index' ? indexDomain(ys) : countDomain(ys),
+    };
+  }, [points, scales]);
 
   if (points.length < 2) {
-    return (
-      <EmptyState message="Hacen falta al menos dos áreas con los dos lados medidos para dibujar el plano." />
-    );
+    return <EmptyState message={emptyMessage} />;
   }
 
   const margin = { top: 28, right: 20, bottom: 44, left: 48 };
   const innerWidth = Math.max(width - margin.left - margin.right, 10);
   const innerHeight = height - margin.top - margin.bottom;
-  const span = domain.max - domain.min;
-  const xAt = (value: number) => margin.left + ((value - domain.min) / span) * innerWidth;
-  const yAt = (value: number) => margin.top + innerHeight - ((value - domain.min) / span) * innerHeight;
+  const { x: dx, y: dy } = domains;
+  const xAt = (value: number) => margin.left + ((value - dx.min) / (dx.max - dx.min)) * innerWidth;
+  const yAt = (value: number) =>
+    margin.top + innerHeight - ((value - dy.min) / (dy.max - dy.min)) * innerHeight;
 
-  const medianX = median(points.map((point) => point.x));
-  const medianY = median(points.map((point) => point.y));
-  const ticks = Array.from({ length: Math.floor(span / 10) + 1 }, (_, i) => domain.min + i * 10);
-
-  const labelled = new Set(
-    [...points]
-      .sort((a, b) => (b.emphasis ?? 0) - (a.emphasis ?? 0))
-      .slice(0, labelCount)
-      .map((point) => point.key),
-  );
+  const medianX = cut?.x ?? median(points.map((point) => point.x));
+  const medianY = cut?.y ?? median(points.map((point) => point.y));
+  const cutLabel = cut?.label ?? 'Mediana';
+  const ticksOf = (domain: { min: number; max: number; step: number }) =>
+    Array.from({ length: Math.round((domain.max - domain.min) / domain.step) + 1 }, (_, i) => domain.min + i * domain.step);
+  const xTicks = ticksOf(dx);
+  const yTicks = ticksOf(dy);
 
   const hovered = points.find((point) => point.key === hover) ?? null;
 
@@ -110,32 +163,72 @@ export function QuadrantScatter({
     setHover(best?.key ?? null);
   }
 
-  const x0 = xAt(domain.min);
-  const x1 = xAt(domain.max);
-  const y0 = yAt(domain.min);
-  const y1 = yAt(domain.max);
+  const x0 = xAt(dx.min);
+  const x1 = xAt(dx.max);
+  const y0 = yAt(dy.min);
+  const y1 = yAt(dy.max);
   const mx = xAt(medianX);
   const my = yAt(medianY);
+
+  /*
+   * Rótulos sin choques: se recorren los puntos de más a menos destacados y cada rótulo
+   * prueba a la derecha y a la izquierda de su punto; si en los dos lados pisa otro rótulo,
+   * otro punto o el borde, no se escribe. El nombre de ese punto sigue en el tooltip y en
+   * la tabla: un rótulo encimado no informa, tapa.
+   */
+  const placements = new Map<string, { x: number; anchor: 'start' | 'end'; text: string }>();
+  {
+    const boxes: { left: number; right: number; top: number; bottom: number }[] = [];
+    const overlaps = (a: (typeof boxes)[number], b: (typeof boxes)[number]) =>
+      a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    const ordered = [...points].sort((a, b) => (b.emphasis ?? 0) - (a.emphasis ?? 0));
+    for (const point of ordered) {
+      if (placements.size >= labelCount) break;
+      const cx = xAt(point.x);
+      const cy = yAt(point.y);
+      const text = point.label.length > 26 ? `${point.label.slice(0, 25)}…` : point.label;
+      const textWidth = text.length * 6.4;
+      for (const side of ['right', 'left'] as const) {
+        const left = side === 'right' ? cx + 11 : cx - 11 - textWidth;
+        const box = { left, right: left + textWidth, top: cy - 9, bottom: cy + 6 };
+        if (box.left < x0 + 2 || box.right > x1 - 2) continue;
+        if (boxes.some((other) => overlaps(box, other))) continue;
+        const coversDot = points.some(
+          (other) =>
+            other.key !== point.key &&
+            overlaps(box, { left: xAt(other.x) - 7, right: xAt(other.x) + 7, top: yAt(other.y) - 7, bottom: yAt(other.y) + 7 }),
+        );
+        if (coversDot) continue;
+        boxes.push(box);
+        placements.set(point.key, { x: side === 'right' ? cx + 11 : cx - 11, anchor: side === 'right' ? 'start' : 'end', text });
+        break;
+      }
+    }
+  }
 
   return (
     <div ref={ref} className="relative w-full" style={{ height }}>
       {width > 0 && (
         <svg width={width} height={height} className="block overflow-visible" aria-hidden="true">
           {/* Velos de cuadrante: el de arriba a la derecha es el bueno en las dos medidas. */}
-          <rect x={mx} y={y1} width={x1 - mx} height={my - y1} fill="#2a78d6" opacity={0.06} />
-          <rect x={x0} y={my} width={mx - x0} height={y0 - my} fill="#e34948" opacity={0.05} />
+          <rect x={mx} y={y1} width={x1 - mx} height={my - y1} fill={neutralVeils ? '#94a3b8' : '#2a78d6'} opacity={0.06} />
+          <rect x={x0} y={my} width={mx - x0} height={y0 - my} fill={neutralVeils ? '#94a3b8' : '#e34948'} opacity={neutralVeils ? 0.06 : 0.05} />
           <rect x={x0} y={y1} width={mx - x0} height={my - y1} fill="#94a3b8" opacity={0.06} />
           <rect x={mx} y={my} width={x1 - mx} height={y0 - my} fill="#94a3b8" opacity={0.06} />
 
-          {ticks.map((tick) => (
-            <g key={tick}>
+          {xTicks.map((tick) => (
+            <g key={`x-${tick}`}>
               <line x1={xAt(tick)} x2={xAt(tick)} y1={y1} y2={y0} stroke="var(--chart-grid)" />
-              <line x1={x0} x2={x1} y1={yAt(tick)} y2={yAt(tick)} stroke="var(--chart-grid)" />
               <text x={xAt(tick)} y={y0 + 16} textAnchor="middle" fontSize={11} fill="var(--chart-ink)">
-                {tick}
+                {formatNumber(tick, 0)}
               </text>
+            </g>
+          ))}
+          {yTicks.map((tick) => (
+            <g key={`y-${tick}`}>
+              <line x1={x0} x2={x1} y1={yAt(tick)} y2={yAt(tick)} stroke="var(--chart-grid)" />
               <text x={x0 - 8} y={yAt(tick) + 4} textAnchor="end" fontSize={11} fill="var(--chart-ink)">
-                {tick}
+                {formatNumber(tick, 0)}
               </text>
             </g>
           ))}
@@ -161,10 +254,10 @@ export function QuadrantScatter({
           <line x1={mx} x2={mx} y1={y1} y2={y0} stroke="var(--chart-benchmark)" strokeOpacity={0.55} />
           <line x1={x0} x2={x1} y1={my} y2={my} stroke="var(--chart-benchmark)" strokeOpacity={0.55} />
           <text x={mx} y={y1 - 8} textAnchor="middle" fontSize={11} fill="var(--foreground-muted)">
-            Mediana {formatNumber(medianX, 1)}
+            {cutLabel} {formatX(medianX)}
           </text>
           <text x={x1} y={my - 6} textAnchor="end" fontSize={11} fill="var(--foreground-muted)">
-            Mediana {formatNumber(medianY, 1)}
+            {cutLabel} {formatY(medianY)}
           </text>
 
           <QuadrantLabel x={x0 + 8} y={y1 + 16} text={quadrants.topLeft} />
@@ -176,7 +269,7 @@ export function QuadrantScatter({
             const cx = xAt(point.x);
             const cy = yAt(point.y);
             const active = hover === point.key;
-            const nearRight = cx > x1 - 140;
+            const placement = placements.get(point.key);
             return (
               <g key={point.key}>
                 <circle
@@ -185,15 +278,15 @@ export function QuadrantScatter({
                   cx={cx}
                   cy={cy}
                   r={active ? 7.5 : 6}
-                  fill="var(--series-1)"
-                  stroke="#fff"
+                  fill={point.hollow ? '#fff' : (point.color ?? 'var(--series-1)')}
+                  stroke={point.hollow ? (point.color ?? 'var(--chart-ink)') : '#fff'}
                   strokeWidth={2}
                 />
-                {(labelled.has(point.key) || active) && (
+                {placement && (
                   <text
-                    x={nearRight ? cx - 11 : cx + 11}
+                    x={placement.x}
                     y={cy + 4}
-                    textAnchor={nearRight ? 'end' : 'start'}
+                    textAnchor={placement.anchor}
                     fontSize={11.5}
                     fontWeight={600}
                     fill="var(--foreground)"
@@ -202,7 +295,7 @@ export function QuadrantScatter({
                     strokeWidth={3}
                     strokeLinejoin="round"
                   >
-                    {point.label.length > 26 ? `${point.label.slice(0, 25)}…` : point.label}
+                    {placement.text}
                   </text>
                 )}
               </g>
@@ -235,9 +328,12 @@ export function QuadrantScatter({
       {hovered && (
         <ChartTooltip x={xAt(hovered.x)} y={yAt(hovered.y) - 10} containerWidth={width}>
           <p className="mb-1 max-w-56 font-medium whitespace-normal text-white">{hovered.label}</p>
-          <TooltipRow value={formatNumber(hovered.y, 1)} label={yLabel.toLowerCase()} />
-          <TooltipRow value={formatNumber(hovered.x, 1)} label={xLabel.toLowerCase()} />
-          {onSelect && <p className="mt-1 text-slate-400">Clic para abrir la ficha</p>}
+          <TooltipRow value={formatY(hovered.y)} label={yLabel.toLowerCase()} />
+          <TooltipRow value={formatX(hovered.x)} label={xLabel.toLowerCase()} />
+          {hovered.detail?.map((row) => (
+            <TooltipRow key={row.label} value={row.value} label={row.label} />
+          ))}
+          {onSelect && <p className="mt-1 text-slate-400">{selectHint}</p>}
         </ChartTooltip>
       )}
     </div>

@@ -33,7 +33,7 @@ export function DataTable<T>({
   rowClassName?: (row: T) => string | undefined;
 }) {
   return (
-    <div className="-mx-1 overflow-x-auto px-1">
+    <div className="relative -mx-1 overflow-x-auto px-1">
       <table className="w-full border-collapse text-sm" style={{ minWidth }}>
         <caption className="sr-only">{caption}</caption>
         <thead>

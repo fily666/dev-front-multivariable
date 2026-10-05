@@ -232,9 +232,143 @@ export interface MonitoringPayload {
   unidentified: number;
 }
 
+/** Una afirmación 0-10 del instrumento, una por una (`GET /admin/items`). */
+export interface ItemStat {
+  code: string;
+  label: string;
+  componentId: number;
+  componentTitle: string;
+  /** Índice al que alimenta; `NPS_INT` para la pregunta de recomendación. */
+  indicatorCode: string;
+  respondents: number;
+  observations: number;
+  /** Promedio en la escala 0-10. */
+  mean: number | null;
+  /** El promedio llevado a 0-100, como los índices. */
+  index: number | null;
+  /** Desviación estándar en la escala 0-10. */
+  sd: number | null;
+  /** 0-100: 100 es que todos dieron la misma nota; 0, la dispersión máxima posible. */
+  consensus: number | null;
+  /** Cuántas veces se dio cada nota, del 0 al 10. */
+  distribution: number[];
+}
+
+export interface ItemsPayload {
+  items: ItemStat[];
+}
+
+/** Los índices vistos desde un nivel de cargo, o desde un grupo de niveles. */
+export interface RoleIndicesRow {
+  key: string;
+  label: string;
+  respondents: number;
+  indicators: Record<string, number | null>;
+  imc: number | null;
+  nps: number | null;
+}
+
+export interface IndicesByRolePayload {
+  roles: RoleIndicesRow[];
+  suppressedRoles: number;
+  groups: (RoleIndicesRow & { roles: string[] })[];
+  suppressedGroups: number;
+}
+
+/** La red de interacción declarada en el componente 1 y lo que se dice de cada área. */
+/**
+ * KPI 32: zona en el plano de motricidad y dependencia. Motriz: mueve más de lo típico y
+ * depende menos; de enlace: las dos por encima; dependiente: la mueven más de lo que mueve;
+ * autónoma: las dos por debajo.
+ */
+export type InfluenceZone = 'MOTRIZ' | 'ENLACE' | 'DEPENDIENTE' | 'AUTONOMA';
+
+export interface InfluenceNode {
+  code: string;
+  name: string;
+  /** La gestión del área; `null` en el nivel de gestiones. */
+  groupCode: string | null;
+  groupName: string | null;
+  /** Suma de la fuerza (1-3) de las relaciones en que otras dependen de esta. */
+  motricidad: number;
+  /** Suma de la fuerza de las relaciones en que esta depende de otras. */
+  dependencia: number;
+  /** Cuántas dependen de esta. */
+  clients: number;
+  /** De cuántas depende esta. */
+  providers: number;
+  zone: InfluenceZone;
+  /** Personas que la evalúan. */
+  receivedFrom: number;
+  /** Personas de ella que evaluaron a otras. Con cero, su dependencia no se mide. */
+  grantedBy: number;
+  irelReceived: number | null;
+  irelGranted: number | null;
+}
+
+/** «`from` mueve a `to`»: la gente de `to` trabaja con `from` y depende de lo que entrega. */
+export interface InfluenceEdge {
+  from: string;
+  to: string;
+  strength: 1 | 2 | 3;
+  weight: number;
+  respondents: number;
+  /** IREL que `to` le da a `from`. */
+  irel: number | null;
+}
+
+export interface InfluenceLevel {
+  nodes: InfluenceNode[];
+  /** Solo las relaciones que alcanzan la cohorte. */
+  edges: InfluenceEdge[];
+  suppressedEdges: number;
+  internalPairs: number;
+  /** La media que corta los dos ejes del plano. */
+  mean: number;
+  thresholds: { media: number; fuerte: number } | null;
+}
+
+export interface InfluencePayload {
+  areas: InfluenceLevel;
+  gestiones: InfluenceLevel;
+}
+
+export interface NetworkPayload {
+  respondents: number;
+  demand: {
+    areaCode: string;
+    areaName: string;
+    procesoName: string | null;
+    mentions: number;
+    principal: number;
+    mentionShare: number;
+  }[];
+  importance: { areaCode: string; areaName: string; mentions: number; irel: number; respondents: number }[];
+  frequency: DistributionRow[];
+  interactionTypes: CountedOption[];
+  valueVsStrengthen: { areaCode: string; areaName: string; value: number; strengthen: number }[];
+  innovation: {
+    respondents: number;
+    noneShare: number;
+    connectedAreas: number;
+    isolated: { areaCode: string; areaName: string }[];
+  };
+}
+
+/** Qué tanto se puede confiar en el corte (`GET /admin/quality`). */
+export interface QualityPayload {
+  completed: number;
+  speeders: { thresholdSeconds: number; count: number; share: number | null };
+  straightLining: { count: number; share: number | null; minItems: number };
+  flatComponents: { componentId: number; title: string; count: number; share: number | null }[];
+  openAnswers: { count: number; share: number | null };
+  otherSpecified: number;
+}
+
 export interface AdminFilters {
   campaignId?: string;
   ownArea?: string;
+  respondentRole?: string;
   frecuencia?: string;
   tipoInteraccion?: string;
   from?: string;

@@ -18,16 +18,21 @@ export function IndicesHeatTable({
   columns,
   labels,
   bands,
+  rowHeader = 'Área de quien responde',
+  emptyMessage = 'Ningún área alcanza la cohorte mínima para desglosarse.',
+  suppressedNoun = { one: 'área oculta', other: 'áreas ocultas' },
 }: {
   payload: IndicesByAreaPayload;
   columns: string[];
   labels: Record<string, string>;
   bands: ThresholdBand[];
+  /** El encabezado de la columna de filas: área de origen, nivel de cargo… */
+  rowHeader?: string;
+  emptyMessage?: string;
+  suppressedNoun?: { one: string; other: string };
 }) {
   if (payload.rows.length === 0) {
-    return (
-      <EmptyState message="Ningún área alcanza la cohorte mínima para desglosarse." />
-    );
+    return <EmptyState message={emptyMessage} />;
   }
 
   const media = (indicators: Record<string, number | null>) => {
@@ -44,7 +49,7 @@ export function IndicesHeatTable({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[760px] border-collapse text-sm">
           <caption className="sr-only">
             Índices según el área de origen de quien respondió, de la más crítica a la más
@@ -56,7 +61,7 @@ export function IndicesHeatTable({
                 scope="col"
                 className="sticky left-0 z-10 bg-surface p-2 text-left text-xs font-medium text-foreground-muted"
               >
-                Área de quien responde
+                {rowHeader}
               </th>
               <th scope="col" className="p-2 text-right text-xs font-medium text-foreground-muted">
                 n
@@ -130,7 +135,7 @@ export function IndicesHeatTable({
       {payload.suppressed > 0 && (
         <p className="text-xs text-foreground-muted">
           {payload.suppressed}{' '}
-          {payload.suppressed === 1 ? 'área oculta' : 'áreas ocultas'} por tener menos
+          {payload.suppressed === 1 ? suppressedNoun.one : suppressedNoun.other} por tener menos
           respuestas que la cohorte mínima.
         </p>
       )}

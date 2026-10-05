@@ -42,10 +42,22 @@ export const ANALYSIS_NAV: NavItem[] = [
     keywords: 'ans agilidad innovación instrumento',
   },
   {
+    href: '/admin/preguntas',
+    label: 'Preguntas',
+    icon: 'list',
+    keywords: 'afirmaciones ítems likert distribución consenso notas peor mejor',
+  },
+  {
     href: '/admin/mapa',
     label: 'Mapa de relacionamiento',
     icon: 'network',
     keywords: 'matriz brecha percepción evalúa aspectos',
+  },
+  {
+    href: '/admin/interaccion',
+    label: 'Red de interacción',
+    icon: 'share',
+    keywords: 'demanda frecuencia tipo interacción valor fortalecer innovación aisladas críticas',
   },
   {
     href: '/admin/cualitativo',

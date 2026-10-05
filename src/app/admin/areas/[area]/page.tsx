@@ -8,9 +8,11 @@ import { ASPECT_LABELS } from '@/lib/admin.types';
 import type { AreaDetailPayload, AspectMatrixRow, ThresholdBand } from '@/lib/admin.types';
 import { npsInsight, toneOfBand, type Insight } from '@/lib/insights';
 import { classify, formatIndex, formatNps, formatNumber, formatSigned } from '@/lib/score-scale';
+import { useAnalysisFilters } from '@/lib/filters-store';
 import { useCatalog } from '@/lib/use-catalog';
 import { useThresholds } from '@/lib/use-thresholds';
 import { Icon } from '@/components/ui/icons';
+import { FilterBar } from '@/components/page/FilterBar';
 import { PageBody, PageHeader, PrintButton, StatGrid, CONTAINER } from '@/components/page/PageHeader';
 import { BarRanking } from '@/components/charts/BarRanking';
 import { ChartCard, Legend } from '@/components/charts/ChartCard';
@@ -31,8 +33,12 @@ export default function AreaDetailPage({ params }: PageProps<'/admin/areas/[area
   // En Next 16 los params son una promesa; `use` los desenvuelve en el cliente.
   const { area } = use(params);
   const router = useRouter();
-  const query = useQuery({ queryKey: ['area', area], queryFn: () => getAreaDetail(area) });
-  const map = useQuery({ queryKey: ['relationship-map'], queryFn: () => getRelationshipMap() });
+  const { apiFilters } = useAnalysisFilters();
+  const query = useQuery({ queryKey: ['area', area, apiFilters], queryFn: () => getAreaDetail(area, apiFilters) });
+  const map = useQuery({
+    queryKey: ['relationship-map', apiFilters],
+    queryFn: () => getRelationshipMap(apiFilters),
+  });
   const monitoring = useQuery({ queryKey: ['monitoring'], queryFn: () => getMonitoring() });
   const bands = useThresholds();
   const { gestiones } = useCatalog();
@@ -140,6 +146,7 @@ export default function AreaDetailPage({ params }: PageProps<'/admin/areas/[area
       </div>
 
       <PageBody className="pt-6">
+        <FilterBar note="la ficha se recalcula con lo que se filtre aquí" />
         <EnvelopeGate query={query} loading={<LoadingCard height={360} />}>
           {(detalle) => {
             const empresa = map.data?.data ? companyAspects(map.data.data.aspects) : null;

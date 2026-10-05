@@ -10,9 +10,11 @@ import {
   openAnswersInsight,
   strengthenInsight,
 } from '@/lib/insights';
+import { useAnalysisFilters } from '@/lib/filters-store';
 import { formatDate } from '@/lib/score-scale';
 import { useAreaNames } from '@/lib/use-area-names';
 import { Icon } from '@/components/ui/icons';
+import { FilterBar } from '@/components/page/FilterBar';
 import {
   InsightTitle,
   PageBody,
@@ -75,7 +77,8 @@ function groupIdeas(answers: OpenAnswer[]): IdeaGroup[] {
 }
 
 export default function CualitativoPage() {
-  const query = useQuery({ queryKey: ['qualitative'], queryFn: () => getQualitative() });
+  const { apiFilters } = useAnalysisFilters();
+  const query = useQuery({ queryKey: ['qualitative', apiFilters], queryFn: () => getQualitative(apiFilters) });
   const data = query.data?.data ?? null;
   const meta = query.data?.meta;
   const titular = data ? barriersInsight(data.barriers) : null;
@@ -117,6 +120,7 @@ export default function CualitativoPage() {
       />
 
       <PageBody>
+        <FilterBar />
         <EnvelopeGate query={query} loading={<LoadingCard height={420} />}>
           {(qual, corte) => (
             <>

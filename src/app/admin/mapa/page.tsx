@@ -5,9 +5,12 @@ import { useQuery } from '@tanstack/react-query';
 import { getRelationshipMap } from '@/lib/admin-client';
 import { ASPECT_LABELS } from '@/lib/admin.types';
 import { aspectsInsight, gapInsight, rankingInsight } from '@/lib/insights';
+import { useAnalysisFilters } from '@/lib/filters-store';
 import { formatIndex, formatSigned } from '@/lib/score-scale';
 import { useThresholds } from '@/lib/use-thresholds';
+import { FilterBar } from '@/components/page/FilterBar';
 import {
+  HeaderButton,
   HowToReadButton,
   InsightTitle,
   PageBody,
@@ -24,6 +27,7 @@ import { EnvelopeGate, LoadingCard } from '@/components/charts/EnvelopeGate';
 import { QuadrantScatter } from '@/components/charts/QuadrantScatter';
 import { RelationshipMatrixView } from '@/components/charts/RelationshipMatrixView';
 import { ScoreHeatmapGrid } from '@/components/charts/ScoreHeatmapGrid';
+import { InfluenceSection } from './InfluenceSection';
 
 /**
  * Cómo se evalúan las áreas entre sí: quién trabaja bien con quién, quién exige más de lo
@@ -31,7 +35,11 @@ import { ScoreHeatmapGrid } from '@/components/charts/ScoreHeatmapGrid';
  */
 export default function MapaPage() {
   const router = useRouter();
-  const query = useQuery({ queryKey: ['relationship-map'], queryFn: () => getRelationshipMap() });
+  const { apiFilters } = useAnalysisFilters();
+  const query = useQuery({
+    queryKey: ['relationship-map', apiFilters],
+    queryFn: () => getRelationshipMap(apiFilters),
+  });
   const bands = useThresholds();
   const data = query.data?.data ?? null;
   const titular = data ? rankingInsight(data.ranking, data.suppressedRanking) : null;
@@ -45,6 +53,9 @@ export default function MapaPage() {
         lede="Cada área califica a las cinco con las que más trabaja. Aquí se lee lo que recibe cada una, lo que reparte y en qué aspecto falla."
         actions={
           <>
+            <HeaderButton href="#influencias" icon="network">
+              Quién mueve a quién
+            </HeaderButton>
             <HowToReadButton title="Cómo se lee el mapa">
               <p>
                 El relacionamiento (IREL) es el promedio de los cinco aspectos del componente 2,
@@ -81,6 +92,7 @@ export default function MapaPage() {
       />
 
       <PageBody>
+        <FilterBar />
         <EnvelopeGate query={query} loading={<LoadingCard height={420} />}>
           {(mapa) => {
             const conBrecha = mapa.gap.filter(
@@ -197,6 +209,8 @@ export default function MapaPage() {
                     <ScoreHeatmapGrid rows={mapa.aspects} bands={bands} />
                   </ChartCard>
                 </div>
+
+                <InfluenceSection />
 
                 <SectionHeading kicker="El dato en bruto" title="La matriz completa, par a par" />
                 <ChartCard

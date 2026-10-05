@@ -263,7 +263,7 @@ export function ActivityHeatmap({ cells }: { cells: MonitoringPayload['heatmap']
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="-mx-1 overflow-x-auto px-1">
+      <div className="relative -mx-1 overflow-x-auto px-1">
         <div
           role="table"
           aria-label="Encuestas enviadas por día de la semana y hora"

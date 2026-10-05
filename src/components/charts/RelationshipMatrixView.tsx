@@ -44,7 +44,7 @@ export function RelationshipMatrixView({ payload, bands }: Props) {
     <div className="flex flex-col gap-3">
       {/* La tabla es ancha por naturaleza: el scroll vive en su contenedor, nunca en la
           página. */}
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[640px] border-collapse text-sm">
           <caption className="sr-only">
             Índice de relacionamiento por área evaluadora y área evaluada

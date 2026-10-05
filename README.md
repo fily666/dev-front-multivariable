@@ -43,7 +43,7 @@ regenera los tipos de ruta. Este proyecto usa esos tipos generados: vea
 
 ## Rutas
 
-11 rutas más el proxy, confirmadas por `next build`:
+13 rutas más el proxy, confirmadas por `next build`:
 
 | Ruta | Render | Qué es |
 |---|---|---|
@@ -52,8 +52,10 @@ regenera los tipos de ruta. Este proyecto usa esos tipos generados: vea
 | `/login` | Estático | Canje del token por la cookie de sesión |
 | `/admin` | Estático | Resumen ejecutivo: el diagnóstico en una lectura |
 | `/admin/indices` | Estático | Los ocho índices, sus pesos y el NPS por área |
-| `/admin/componentes` | Estático | Detalle por componente y por área de origen |
-| `/admin/mapa` | Estático | Mapa de relacionamiento: plano, brecha, aspectos y matriz |
+| `/admin/componentes` | Estático | Detalle por componente, por área de origen y por nivel de cargo |
+| `/admin/preguntas` | Estático | Las 33 afirmaciones 0-10, una por una: distribución, neto y consenso |
+| `/admin/mapa` | Estático | Mapa de relacionamiento: plano, brecha, aspectos, influencias y matriz |
+| `/admin/interaccion` | Estático | Red de interacción: demanda, áreas críticas, frecuencia, valor contra fortalecer |
 | `/admin/cualitativo` | Estático | Nube de ideas, obstáculos y motivos |
 | `/admin/areas` | Estático | Todas las áreas, por gestión |
 | `/admin/areas/[area]` | Dinámico | Ficha de un área |
@@ -80,16 +82,18 @@ src/
 │   ├── providers.tsx       React Query
 │   ├── page.tsx            la encuesta
 │   ├── login/ gracias/
-│   └── admin/              layout con AdminShell + las 9 vistas del panel
+│   └── admin/              layout con AdminShell + las 11 vistas del panel
 ├── components/
 │   ├── brand/Logo.tsx      logotipo e isotipo; versión según el fondo
 │   ├── ui/icons.tsx        iconos de trazo (24 × 24, trazo 1,8)
 │   ├── shell/              AdminShell · SidebarNav · CommandPalette · nav-config
-│   ├── page/PageHeader.tsx cabecera (portada o plana), migas, cifras, acciones, secciones
+│   ├── page/               PageHeader (portada o plana, migas, cifras, acciones, secciones)
+│   │                       FilterBar (la fila de filtros globales)
 │   ├── survey/             el wizard (ver «Los cuatro bloques de color»)
 │   └── charts/             piezas del panel:
 │                           ChartCard · DataTable · EnvelopeGate · SidePanel
 │                           PackedBubbles + pack.ts · QuadrantScatter · TimelineChart
+│                           LikertBars · ItemHistogram
 │                           MonitoringCharts (embudo, histograma, calendario)
 │                           IndicatorMeter · BarRanking · DivergingBars · OpposedBars
 │                           OrdinalBars · NpsGauge · RadarIndices · PriorityList
@@ -100,6 +104,7 @@ src/
     ├── admin-client.ts     endpoints del panel
     ├── insights.ts         **el motor de lecturas**: convierte cada payload en una conclusión
     ├── use-catalog.ts      el organigrama (gestiones y subprocesos) desde el catálogo público
+    ├── filters-store.ts    los filtros globales del análisis, en la sesión del navegador
     ├── use-area-names.ts   códigos de área → nombre
     ├── zod-schema-builder.ts  validación generada desde el catálogo
     ├── draft-storage.ts    puntero del borrador en localStorage
@@ -184,8 +189,10 @@ Manual de Marca— está en [`../docs/MARCA.md`](../docs/MARCA.md).
 |---|---|---|
 | `/admin` | Resumen ejecutivo | El diagnóstico entero en una lectura de arriba abajo. Es la portada |
 | `/admin/indices` | Índices | De dónde sale cada cifra: pesos, cuánto le resta cada índice al IMC, NPS por área |
-| `/admin/componentes` | Componentes | Cada componente por separado y cómo cambia según quién responde |
-| `/admin/mapa` | Mapa de relacionamiento | Plano «da/recibe», ranking, aspectos y la matriz en bruto |
+| `/admin/componentes` | Componentes | Cada componente por separado y cómo cambia según el área y el nivel de quien responde |
+| `/admin/preguntas` | Preguntas | Lo que los promedios esconden: cada afirmación con su reparto de notas |
+| `/admin/mapa` | Mapa de relacionamiento | Plano «da/recibe», ranking, aspectos, **influencias** (red, matriz y plano de motricidad y dependencia, por área o gestión) y la matriz en bruto |
+| `/admin/interaccion` | Red de interacción | Qué áreas sostienen el trabajo de las demás y cuáles son críticas |
 | `/admin/cualitativo` | Cualitativo | La nube de ideas de «qué cambiaría» y lo que marcaron |
 | `/admin/areas` | Todas las áreas | La puerta a cada ficha, por gestión |
 | `/admin/areas/[area]` | (cada subproceso) | Cómo la evalúan, contra el promedio de la empresa |
@@ -235,6 +242,37 @@ empaquetado es el algoritmo de cadena frontal de d3 (`packSiblings`), reescrito 
 radio— es proporcional al valor. La misma pieza arma la **nube de ideas** de Cualitativo,
 donde las respuestas abiertas se juntan por tema (o por texto idéntico) y se clasifican en
 bloque desde el panel de detalle.
+
+### Los KPIs 21–32 y los filtros globales
+
+Desde el 5-oct-2026 el panel explota datos que antes solo entraban promediados o no se usaban
+(el detalle está en `Contexto.md` §4.5):
+
+| KPI | Dónde | Forma |
+|---|---|---|
+| 21 · Distribución de cada afirmación por banda | Preguntas | **Barras Likert divergentes**: bandas bajas a la izquierda del cero |
+| 22 · Neto por afirmación, 10 peores y 10 mejores | Preguntas, Resumen | Ranking |
+| 23 · Consenso contra nivel | Preguntas | **Plano** con cuadrantes «problema de sistema / localizado» |
+| 24 · Índices por cargo y por grupo de cargo | Componentes | Matriz de calor |
+| 25 · Brecha jerárquica (dirección − equipos) | Componentes, Resumen | Barras divergentes |
+| 26 · Demanda por área | Red de interacción | **Burbujas** |
+| 27 · Importancia × desempeño | Red de interacción, Resumen | **Plano** con el cuadrante «crítica» |
+| 28 · Frecuencia y tipo de interacción | Red de interacción | Rampa ordinal y barras |
+| 29 · Valor × fortalecer | Red de interacción | Barras enfrentadas |
+| 30 · Aislamiento en innovación | Red de interacción | Cifras y lista |
+| 31 · Calidad del corte | Metodología | Tarjetas y barras |
+| 32 · Influencias: quién mueve a quién | Mapa de relacionamiento | **Red de tres capas**, matriz de influencias y plano de motricidad y dependencia; lista compacta en el teléfono |
+
+Cada afirmación abre un panel con su **histograma 0-10** pintado por banda y su promedio
+marcado: es la vista que distingue «todos dan 6» de «unos dan 2 y otros 10».
+
+**Filtros globales.** Las vistas de análisis abren con una fila de filtros —área de quien
+responde, cargo, frecuencia y tipo de interacción, rango de fechas— que acota todo lo que hay
+debajo. Viven en `sessionStorage` ([`filters-store.ts`](src/lib/filters-store.ts)) y no en la
+URL a propósito: tienen que acompañar al analista cuando cambia de vista. Cada corte filtrado
+pasa por la cohorte mínima en el servidor, así que filtrar demasiado fino muestra el aviso de
+anonimato, nunca el dato. El monitoreo y Metodología no se filtran: describen la recolección
+entera.
 
 ### Las formas, y por qué cada una
 
@@ -388,7 +426,7 @@ dominio del back haría que el navegador rechace la cookie. El detalle está en
 npm run typecheck && npm run lint && npm run build
 ```
 
-Estado al 5-oct-2026: los tres pasan — 11 rutas más el proxy.
+Estado al 5-oct-2026: los tres pasan — 13 rutas más el proxy.
 
 Este proyecto **no tiene tests automatizados**; la batería de 182 tests vive en `dev-back`,
 donde están las fórmulas y las reglas del instrumento.

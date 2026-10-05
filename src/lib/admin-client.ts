@@ -6,6 +6,11 @@ import type {
   Envelope,
   IndicatorsPayload,
   IndicesByAreaPayload,
+  IndicesByRolePayload,
+  ItemsPayload,
+  InfluencePayload,
+  NetworkPayload,
+  QualityPayload,
   MonitoringPayload,
   NpsPayload,
   OverviewPayload,
@@ -19,6 +24,7 @@ function toQuery(filters: AdminFilters = {}): Record<string, string | undefined>
   return {
     campaignId: filters.campaignId || undefined,
     ownArea: filters.ownArea || undefined,
+    respondentRole: filters.respondentRole || undefined,
     frecuencia: filters.frecuencia || undefined,
     tipoInteraccion: filters.tipoInteraccion || undefined,
     from: filters.from || undefined,
@@ -59,6 +65,22 @@ export const getAreaDetail = (code: string, filters?: AdminFilters) =>
 
 export const getIndicesByArea = (filters?: AdminFilters) =>
   apiFetch<Envelope<IndicesByAreaPayload>>('/admin/indices-by-area', { query: toQuery(filters) });
+
+export const getItems = (filters?: AdminFilters) =>
+  apiFetch<Envelope<ItemsPayload>>('/admin/items', { query: toQuery(filters) });
+
+export const getIndicesByRole = (filters?: AdminFilters) =>
+  apiFetch<Envelope<IndicesByRolePayload>>('/admin/indices-by-role', { query: toQuery(filters) });
+
+export const getNetwork = (filters?: AdminFilters) =>
+  apiFetch<Envelope<NetworkPayload>>('/admin/network', { query: toQuery(filters) });
+
+/** KPI 32: quién mueve a quién, por área y por gestión. */
+export const getInfluence = (filters?: AdminFilters) =>
+  apiFetch<Envelope<InfluencePayload>>('/admin/influence', { query: toQuery(filters) });
+
+export const getQuality = (filters?: AdminFilters) =>
+  apiFetch<Envelope<QualityPayload>>('/admin/quality', { query: toQuery(filters) });
 
 export const getMonitoring = (filters?: AdminFilters) =>
   apiFetch<Envelope<MonitoringPayload>>('/admin/monitoring', { query: toQuery(filters) });

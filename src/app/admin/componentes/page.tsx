@@ -1,17 +1,22 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { getComponents, getIndicesByArea } from '@/lib/admin-client';
+import { getComponents, getIndicesByArea, getIndicesByRole } from '@/lib/admin-client';
 import {
   RESPONSE_TIME_OUT_OF_SCALE,
   byAreaInsight,
+  hierarchyInsight,
   innovationInsight,
   radarInsight,
   responseTimeInsight,
+  rolesSpreadInsight,
 } from '@/lib/insights';
-import { formatIndex, formatShare } from '@/lib/score-scale';
+import { useAnalysisFilters } from '@/lib/filters-store';
+import { formatIndex, formatShare, formatSigned } from '@/lib/score-scale';
 import { useAreaNames } from '@/lib/use-area-names';
+import { FilterBar } from '@/components/page/FilterBar';
 import { InsightTitle, PageBody, PageHeader, PrintButton, SectionHeading } from '@/components/page/PageHeader';
+import { DivergingBars } from '@/components/charts/DivergingBars';
 import { BarRanking } from '@/components/charts/BarRanking';
 import { ChartCard, Legend } from '@/components/charts/ChartCard';
 import { DataTable } from '@/components/charts/DataTable';
@@ -38,8 +43,16 @@ const INDEX_LABELS: Record<string, string> = {
  * Cada componente del instrumento por separado, y cómo cambia según quién responde.
  */
 export default function ComponentesPage() {
-  const query = useQuery({ queryKey: ['components'], queryFn: () => getComponents() });
-  const byArea = useQuery({ queryKey: ['indices-by-area'], queryFn: () => getIndicesByArea() });
+  const { apiFilters } = useAnalysisFilters();
+  const query = useQuery({ queryKey: ['components', apiFilters], queryFn: () => getComponents(apiFilters) });
+  const byArea = useQuery({
+    queryKey: ['indices-by-area', apiFilters],
+    queryFn: () => getIndicesByArea(apiFilters),
+  });
+  const byRole = useQuery({
+    queryKey: ['indices-by-role', apiFilters],
+    queryFn: () => getIndicesByRole(apiFilters),
+  });
   const nombreDe = useAreaNames();
 
   const data = query.data?.data ?? null;
@@ -56,6 +69,7 @@ export default function ComponentesPage() {
       />
 
       <PageBody>
+        <FilterBar />
         <EnvelopeGate query={query} loading={<LoadingCard height={360} />}>
           {(componentes) => {
             /*
@@ -229,6 +243,121 @@ export default function ComponentesPage() {
                         />
                       )}
                     </ChartCard>
+                  )}
+                </EnvelopeGate>
+
+                <SectionHeading kicker="Según el nivel de cargo" title="La organización vista desde la dirección y desde los equipos" />
+                <EnvelopeGate query={byRole}>
+                  {(roleData) => (
+                    <div className="grid gap-6">
+                      <ChartCard
+                        insight={hierarchyInsight(roleData)}
+                        subtitle="Dirección (directores, gerentes y heads) menos equipos (profesionales y analistas), índice por índice"
+                        howToRead={
+                          <>
+                            <p>
+                              A la derecha del cero, los índices que la dirección ve mejor que los equipos;
+                              a la izquierda, los que ven mejor los equipos. Los cargos se agrupan para que
+                              la cohorte mínima no borre la lectura cuando un cargo suelto tiene pocas
+                              respuestas.
+                            </p>
+                            <p>Mandos medios (coordinadores y líderes) aparecen en la matriz de al lado.</p>
+                          </>
+                        }
+                      >
+                        <DivergingBars
+                          negativeLabel="Lo ven mejor los equipos"
+                          positiveLabel="Lo ve mejor la dirección"
+                          rows={(() => {
+                            const direccion = roleData.groups.find((group) => group.key === 'DIRECCION');
+                            const equipos = roleData.groups.find((group) => group.key === 'EQUIPOS');
+                            if (!direccion || !equipos) return [];
+                            return INDEX_COLUMNS.map((code) => {
+                              const a = direccion.indicators[code];
+                              const b = equipos.indicators[code];
+                              return {
+                                key: code,
+                                label: INDEX_LABELS[code],
+                                value: a === null || a === undefined || b === null || b === undefined ? null : a - b,
+                                hint: `${INDEX_LABELS[code]}: dirección ${formatIndex(a ?? null, 1)} · equipos ${formatIndex(b ?? null, 1)}`,
+                              };
+                            });
+                          })()}
+                          emptyMessage="Hace falta que la dirección y los equipos alcancen la cohorte mínima."
+                        />
+                      </ChartCard>
+
+                      <ChartCard
+                        insight={rolesSpreadInsight(roleData)}
+                        subtitle="Los mismos índices según el nivel de quien respondió"
+                        views={[
+                          {
+                            id: 'grupos',
+                            label: 'Por grupo',
+                            content: (
+                              <IndicesHeatTable
+                                payload={{
+                                  rows: roleData.groups.map((row) => ({
+                                    areaCode: row.key,
+                                    areaName: row.label,
+                                    respondents: row.respondents,
+                                    indicators: row.indicators,
+                                  })),
+                                  suppressed: roleData.suppressedGroups,
+                                }}
+                                columns={INDEX_COLUMNS}
+                                labels={INDEX_LABELS}
+                                bands={componentes.thresholds}
+                                rowHeader="Grupo de cargo"
+                                emptyMessage="Ningún grupo de cargo alcanza la cohorte mínima."
+                                suppressedNoun={{ one: 'grupo oculto', other: 'grupos ocultos' }}
+                              />
+                            ),
+                          },
+                          {
+                            id: 'cargos',
+                            label: 'Por cargo',
+                            content: (
+                              <IndicesHeatTable
+                                payload={{
+                                  rows: roleData.roles.map((row) => ({
+                                    areaCode: row.key,
+                                    areaName: row.label,
+                                    respondents: row.respondents,
+                                    indicators: row.indicators,
+                                  })),
+                                  suppressed: roleData.suppressedRoles,
+                                }}
+                                columns={INDEX_COLUMNS}
+                                labels={INDEX_LABELS}
+                                bands={componentes.thresholds}
+                                rowHeader="Cargo"
+                                emptyMessage="Ningún cargo alcanza la cohorte mínima por sí solo."
+                                suppressedNoun={{ one: 'cargo oculto', other: 'cargos ocultos' }}
+                              />
+                            ),
+                          },
+                          {
+                            id: 'tabla',
+                            label: 'IMC y NPS',
+                            content: (
+                              <DataTable
+                                caption="Índice compuesto y NPS por grupo de cargo"
+                                rowKey={(row) => row.key}
+                                rows={roleData.groups}
+                                minWidth={380}
+                                columns={[
+                                  { key: 'grupo', header: 'Grupo', render: (row) => row.label },
+                                  { key: 'n', header: 'Respuestas', render: (row) => row.respondents },
+                                  { key: 'imc', header: 'IMC', render: (row) => formatIndex(row.imc, 1) },
+                                  { key: 'nps', header: 'NPS', render: (row) => (row.nps === null ? '—' : formatSigned(row.nps, 0)) },
+                                ]}
+                              />
+                            ),
+                          },
+                        ]}
+                      />
+                    </div>
                   )}
                 </EnvelopeGate>
               </>

@@ -1,14 +1,16 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { getIndicators, getMonitoring } from '@/lib/admin-client';
+import { getIndicators, getMonitoring, getQuality } from '@/lib/admin-client';
+import { qualityInsight } from '@/lib/insights';
 import { getSchema } from '@/lib/survey-client';
-import { formatDateTime, formatNumber } from '@/lib/score-scale';
+import { formatDateTime, formatNumber, formatShare } from '@/lib/score-scale';
 import { Icon, type IconName } from '@/components/ui/icons';
 import { PageBody, PageHeader, PrintButton, SectionHeading, StatGrid } from '@/components/page/PageHeader';
 import { BarRanking } from '@/components/charts/BarRanking';
 import { ChartCard } from '@/components/charts/ChartCard';
 import { DataTable } from '@/components/charts/DataTable';
+import { EnvelopeGate } from '@/components/charts/EnvelopeGate';
 
 /**
  * Las fórmulas del instrumento, tal como las define la especificación funcional
@@ -38,6 +40,7 @@ export default function MetodologiaPage() {
   const indicators = useQuery({ queryKey: ['indicators'], queryFn: () => getIndicators() });
   const monitoring = useQuery({ queryKey: ['monitoring'], queryFn: () => getMonitoring() });
   const schema = useQuery({ queryKey: ['survey-schema'], queryFn: () => getSchema(), staleTime: 30 * 60_000 });
+  const quality = useQuery({ queryKey: ['quality'], queryFn: () => getQuality() });
 
   const meta = indicators.data?.meta ?? monitoring.data?.meta;
   const minCohort = meta?.minCohortSize ?? 4;
@@ -100,6 +103,72 @@ export default function MetodologiaPage() {
             ]}
           />
         </div>
+
+        <SectionHeading kicker="Calidad del corte" title="Qué tanto se puede confiar en lo recogido" />
+        <EnvelopeGate query={quality}>
+          {(calidad) => (
+            <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr] xl:items-start">
+              <ChartCard
+                accent
+                insight={qualityInsight(calidad)}
+                subtitle="Señales de respuestas que informan poco: hechas a la carrera o con la misma nota en todo"
+                howToRead={
+                  <>
+                    <p>
+                      «En línea recta» es una encuesta que dio exactamente la misma nota a las{' '}
+                      {calidad.straightLining.minItems} o más afirmaciones de los componentes 3 a 8. «A
+                      la carrera», una que se envió en menos de{' '}
+                      {Math.round(calidad.speeders.thresholdSeconds / 60)} minutos, cuando el
+                      instrumento estima 15.
+                    </p>
+                    <p>
+                      No se excluyen del cálculo: son respuestas válidas de personas reales. Se
+                      señalan para que quien lee sepa cuánto pesan y pueda cruzarlas con los filtros.
+                    </p>
+                  </>
+                }
+              >
+                <dl className="grid gap-3 sm:grid-cols-2">
+                  {(
+                    [
+                      ['Enviadas a la carrera', calidad.speeders.count, calidad.speeders.share, `En menos de ${Math.round(calidad.speeders.thresholdSeconds / 60)} min`],
+                      ['En línea recta', calidad.straightLining.count, calidad.straightLining.share, 'La misma nota en todo'],
+                      ['Con respuesta abierta', calidad.openAnswers.count, calidad.openAnswers.share, 'Escribieron qué cambiarían'],
+                      ['«Otra» con detalle', calidad.otherSpecified, null, 'Opciones abiertas especificadas'],
+                    ] as [string, number, number | null, string][]
+                  ).map(([label, count, share, hint]) => (
+                    <div key={label} className="rounded-xl bg-surface-sunken px-4 py-3 ring-1 ring-border-subtle">
+                      <dd className="flex items-baseline gap-2 text-2xl font-semibold tracking-tight text-foreground">
+                        {count}
+                        {share !== null && <span className="text-sm font-medium text-foreground-muted">{formatShare(share, 0)}</span>}
+                      </dd>
+                      <dt className="text-sm text-foreground">{label}</dt>
+                      <p className="text-xs text-foreground-subtle">{hint}</p>
+                    </div>
+                  ))}
+                </dl>
+              </ChartCard>
+
+              <ChartCard
+                title="Componentes respondidos con una sola nota"
+                subtitle="Encuestas que dieron la misma nota a todas las afirmaciones de cada componente"
+              >
+                <BarRanking
+                  suffix="%"
+                  max={100}
+                  labelWidth="12rem"
+                  rows={calidad.flatComponents.map((component) => ({
+                    key: String(component.componentId),
+                    label: `${component.componentId}. ${component.title}`,
+                    value: component.share,
+                    hint: `${component.count} ${component.count === 1 ? 'encuesta' : 'encuestas'}`,
+                  }))}
+                  emptyMessage="Sin encuestas completas que revisar."
+                />
+              </ChartCard>
+            </div>
+          )}
+        </EnvelopeGate>
 
         <SectionHeading kicker="Cálculo" title="Qué mide cada índice y cómo se combinan" />
         <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr] xl:items-start">

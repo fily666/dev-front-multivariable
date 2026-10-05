@@ -3,6 +3,9 @@
 import { useQuery } from '@tanstack/react-query';
 import {
   getIndicators,
+  getIndicesByRole,
+  getItems,
+  getNetwork,
   getOverview,
   getQualitative,
   getRelationshipMap,
@@ -10,17 +13,24 @@ import {
 import {
   barriersInsight,
   gapInsight,
+  hierarchyInsight,
   imcInsight,
+  importanceInsight,
   motivesInsight,
   npsInsight,
   priorities,
   radarInsight,
   rankingInsight,
   strengthenInsight,
+  scaleItems,
   strengths,
   strengthsHeading,
+  weakestItemInsight,
 } from '@/lib/insights';
+import { useAnalysisFilters } from '@/lib/filters-store';
 import { formatDateTime, formatDuration, formatIndex, formatNps, formatShare } from '@/lib/score-scale';
+import { useThresholds } from '@/lib/use-thresholds';
+import { FilterBar } from '@/components/page/FilterBar';
 import {
   HowToReadButton,
   InsightTitle,
@@ -59,12 +69,17 @@ import { RadarIndices } from '@/components/charts/RadarIndices';
  * dejaría la pantalla en blanco hasta que llegara la más lenta.
  */
 export default function ResumenPage() {
-  const overview = useQuery({ queryKey: ['overview'], queryFn: () => getOverview() });
-  const indicators = useQuery({ queryKey: ['indicators'], queryFn: () => getIndicators() });
-  const qualitative = useQuery({ queryKey: ['qualitative'], queryFn: () => getQualitative() });
-  const map = useQuery({ queryKey: ['relationship-map'], queryFn: () => getRelationshipMap() });
+  const { apiFilters } = useAnalysisFilters();
+  const overview = useQuery({ queryKey: ['overview', apiFilters], queryFn: () => getOverview(apiFilters) });
+  const indicators = useQuery({ queryKey: ['indicators', apiFilters], queryFn: () => getIndicators(apiFilters) });
+  const qualitative = useQuery({ queryKey: ['qualitative', apiFilters], queryFn: () => getQualitative(apiFilters) });
+  const map = useQuery({ queryKey: ['relationship-map', apiFilters], queryFn: () => getRelationshipMap(apiFilters) });
+  const items = useQuery({ queryKey: ['items', apiFilters], queryFn: () => getItems(apiFilters) });
+  const byRole = useQuery({ queryKey: ['indices-by-role', apiFilters], queryFn: () => getIndicesByRole(apiFilters) });
+  const network = useQuery({ queryKey: ['network', apiFilters], queryFn: () => getNetwork(apiFilters) });
 
-  const bands = indicators.data?.data?.thresholds ?? [];
+  // Los umbrales salen del corte sin filtrar: un filtro fino vacía el payload, no el semáforo.
+  const bands = useThresholds();
   const data = overview.data?.data ?? null;
   const meta = overview.data?.meta;
 
@@ -145,6 +160,7 @@ export default function ResumenPage() {
       />
 
       <PageBody>
+        <FilterBar />
         <EnvelopeGate query={overview} loading={<LoadingCard height={320} />}>
           {(resumen, corte) => (
             <>
@@ -237,6 +253,58 @@ export default function ResumenPage() {
                         </ChartCard>
                       </div>
                     </>
+                  );
+                }}
+              </EnvelopeGate>
+
+              {/* ---------- Lo que esconden los promedios ---------- */}
+              <SectionHeading
+                kicker="Debajo de los índices"
+                title="Lo que esconden los promedios"
+                aside={<MoreLink href="/admin/preguntas">Ver las afirmaciones una por una</MoreLink>}
+              />
+              <EnvelopeGate query={items}>
+                {(afirmaciones) => {
+                  const peores = [...scaleItems(afirmaciones.items)].sort((a, b) => a.index - b.index).slice(0, 3);
+                  return (
+                    <div className="grid gap-6 xl:grid-cols-[1.7fr_1fr] xl:items-start">
+                      <ChartCard
+                        insight={weakestItemInsight(afirmaciones.items, bands)}
+                        subtitle="Las tres afirmaciones peor calificadas de todo el instrumento (0-100)"
+                      >
+                        <BarRanking
+                          max={100}
+                          bands={bands}
+                          labelWidth="18rem"
+                          rows={peores.map((item) => ({
+                            key: item.code,
+                            label: item.label,
+                            value: item.index,
+                            hint: `${item.componentId}. ${item.componentTitle}`,
+                          }))}
+                        />
+                      </ChartCard>
+                      <div className="flex flex-col gap-6">
+                        <EnvelopeGate query={byRole}>
+                          {(niveles) => (
+                            <ChartCard
+                              insight={hierarchyInsight(niveles)}
+                              subtitle="Dirección contra equipos, índice por índice"
+                              footer={<MoreLink href="/admin/componentes">Ver por nivel de cargo</MoreLink>}
+                            />
+                          )}
+                        </EnvelopeGate>
+                        <EnvelopeGate query={network}>
+                          {(red) => (
+                            <ChartCard
+                              insight={importanceInsight(red)}
+                              subtitle="Demanda de cada área contra el relacionamiento que recibe"
+                              footer={<MoreLink href="/admin/interaccion">Ver la red de interacción</MoreLink>}
+                            />
+                          )}
+                        </EnvelopeGate>
+                      </div>
+                    </div>
                   );
                 }}
               </EnvelopeGate>

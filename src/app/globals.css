@@ -128,6 +128,17 @@
   --diverge-neg: #e34948;
   --diverge-mid: #eef1f5;
 
+  /*
+   * Likert divergente (afirmaciones por banda del semáforo): dos rojos para las bandas bajas
+   * y dos azules para las altas. Cada brazo pasa los controles ordinales; los extremos se
+   * separan ΔE 21,5 con protanopia. Los pasos claros quedan bajo 3:1, así que van siempre
+   * con rótulo y con vista de tabla.
+   */
+  --likert-1: #c63734;
+  --likert-2: #f0928f;
+  --likert-3: #86b6ef;
+  --likert-4: #256abf;
+
   /* Mobiliario del gráfico: hairlines sólidas, un paso fuera de la superficie. */
   --chart-grid: #e2e8f0;
   --chart-axis: #cad5e2;

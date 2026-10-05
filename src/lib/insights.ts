@@ -3,7 +3,14 @@ import type {
   CountedOption,
   DistributionRow,
   IndicesByAreaPayload,
+  IndicesByRolePayload,
+  InfluenceLevel,
+  InfluenceNode,
+  InfluenceZone,
+  ItemStat,
   MonitoringPayload,
+  NetworkPayload,
+  QualityPayload,
   NpsResult,
   OverviewPayload,
   PerceptionGapRow,
@@ -11,7 +18,7 @@ import type {
   ThresholdBand,
 } from './admin.types';
 import { ASPECT_LABELS } from './admin.types';
-import { formatDuration, formatNps, formatNumber, formatRelative } from './score-scale';
+import { classify, formatDuration, formatIndex, formatNps, formatNumber, formatRelative } from './score-scale';
 
 /**
  * El motor de lecturas del panel.
@@ -853,4 +860,467 @@ export function scheduleInsight(cells: MonitoringPayload['heatmap']): Insight {
     headline: `Se responde sobre todo los ${DIAS[dia]} y hacia las ${hora}:00`,
     detail: 'Un recordatorio rinde más si llega justo antes de la franja en la que la gente ya responde.',
   };
+}
+
+// ---------------------------------------------------------------- afirmaciones
+
+/** Las afirmaciones 0-10 con dato, sin la pregunta de recomendación (otra escala). */
+export function scaleItems(items: ItemStat[]): (ItemStat & { index: number; mean: number })[] {
+  return items.filter(
+    (item): item is ItemStat & { index: number; mean: number } =>
+      item.indicatorCode !== 'NPS_INT' && item.index !== null && item.mean !== null,
+  );
+}
+
+/** La afirmación peor calificada, con nombre propio: es lo que un plan de mejora ataca. */
+export function weakestItemInsight(items: ItemStat[], bands: ThresholdBand[]): Insight {
+  const conDato = scaleItems(items);
+  if (conDato.length === 0) {
+    return { tone: 'neutral', headline: 'Todavía no hay afirmaciones con dato.' };
+  }
+  const ordenadas = [...conDato].sort((a, b) => a.index - b.index);
+  const peor = ordenadas[0];
+  const mejor = ordenadas[ordenadas.length - 1];
+  const banda = bands.find((band) => peor.index >= band.minValue && peor.index <= band.maxValue) ?? null;
+  const cita = `«${peor.label}»`;
+
+  return {
+    tone: toneOfBand(banda, bands),
+    headline: `${cita} es la afirmación peor calificada: ${nf(peor.mean, 1)} de 10`,
+    emphasis: cita,
+    detail: `Es del componente ${peor.componentId} (${peor.componentTitle}). La mejor calificada es «${mejor.label}», con ${nf(mejor.mean, 1)}.`,
+  };
+}
+
+/**
+ * La afirmación que más divide. Una dispersión alta no es una nota media: es que una
+ * parte de la empresa vive la afirmación como cierta y otra como falsa, y eso suele
+ * señalar experiencias distintas según el área o el nivel.
+ */
+export function consensusInsight(items: ItemStat[]): Insight {
+  const conDato = scaleItems(items).filter((item) => item.consensus !== null);
+  if (conDato.length < 2) {
+    return { tone: 'neutral', headline: 'Faltan afirmaciones con dato para medir el consenso.' };
+  }
+  const ordenadas = [...conDato].sort((a, b) => (a.consensus ?? 0) - (b.consensus ?? 0));
+  const dividida = ordenadas[0];
+  const promedio = conDato.reduce((sum, item) => sum + (item.consensus ?? 0), 0) / conDato.length;
+
+  return {
+    tone: (dividida.consensus ?? 100) < 40 ? 'warn' : 'neutral',
+    headline: `«${dividida.label}» es la afirmación que más divide: consenso de ${nf(dividida.consensus ?? 0, 0)} sobre 100`,
+    detail: `El consenso medio de las ${conDato.length} afirmaciones es ${nf(promedio, 0)}. Lo bajo y compartido es un problema de sistema; lo bajo y dividido suele ser un problema de algunas áreas.`,
+  };
+}
+
+/** Cuántas afirmaciones caen en las bandas bajas: el tamaño del frente de mejora. */
+export function lowItemsCount(items: ItemStat[], bands: ThresholdBand[]): number {
+  return scaleItems(items).filter((item) => {
+    const tone = toneOfBand(
+      bands.find((band) => item.index >= band.minValue && item.index <= band.maxValue) ?? null,
+      bands,
+    );
+    return tone === 'warn' || tone === 'bad';
+  }).length;
+}
+
+// ---------------------------------------------------------------- niveles de cargo
+
+const INDEX_NAMES: Record<string, string> = {
+  IREL: 'el relacionamiento',
+  ICOM: 'la comunicación',
+  ISI: 'el servicio interno',
+  IAG: 'la agilidad',
+  IINT: 'la integración',
+  ICOL: 'la colaboración',
+  IINN: 'la innovación',
+  NIO: 'la interacción',
+};
+
+/**
+ * La brecha jerárquica: cuánto mejor (o peor) ve la organización la dirección que los
+ * equipos. Es la diferencia que más pesa en un plan: si la dirección no ve el problema que
+ * ven los equipos, no lo va a priorizar.
+ */
+export function hierarchyInsight(payload: IndicesByRolePayload): Insight {
+  const direccion = payload.groups.find((group) => group.key === 'DIRECCION');
+  const equipos = payload.groups.find((group) => group.key === 'EQUIPOS');
+  if (!direccion || !equipos) {
+    return {
+      tone: 'neutral',
+      headline: 'Hace falta que la dirección y los equipos alcancen la cohorte mínima para compararlos.',
+      detail: `${payload.groups.length} de 3 grupos de cargo tienen hoy respuestas suficientes.`,
+    };
+  }
+
+  const brechas = Object.keys(INDEX_NAMES)
+    .map((code) => ({
+      code,
+      gap:
+        direccion.indicators[code] !== null && direccion.indicators[code] !== undefined &&
+        equipos.indicators[code] !== null && equipos.indicators[code] !== undefined
+          ? (direccion.indicators[code] as number) - (equipos.indicators[code] as number)
+          : null,
+    }))
+    .filter((entry): entry is { code: string; gap: number } => entry.gap !== null)
+    .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap));
+
+  if (brechas.length === 0) {
+    return { tone: 'neutral', headline: 'Sin índices comparables entre la dirección y los equipos.' };
+  }
+
+  const mayor = brechas[0];
+  const magnitud = Math.abs(mayor.gap);
+  const imcGap =
+    direccion.imc !== null && equipos.imc !== null ? direccion.imc - equipos.imc : null;
+
+  if (magnitud < 5) {
+    return {
+      tone: 'good',
+      headline: 'La dirección y los equipos ven la organización casi igual',
+      detail: `La mayor diferencia está en ${INDEX_NAMES[mayor.code]}: ${nf(magnitud, 1)} puntos.`,
+    };
+  }
+
+  return {
+    tone: magnitud >= 15 ? 'warn' : 'neutral',
+    headline:
+      mayor.gap > 0
+        ? `La dirección ve ${INDEX_NAMES[mayor.code]} ${nf(magnitud, 1)} puntos mejor que los equipos`
+        : `Los equipos ven ${INDEX_NAMES[mayor.code]} ${nf(magnitud, 1)} puntos mejor que la dirección`,
+    emphasis: `${nf(magnitud, 1)} puntos`,
+    detail:
+      imcGap !== null
+        ? `En el índice compuesto la diferencia es de ${nf(Math.abs(imcGap), 1)} puntos a favor de ${imcGap >= 0 ? 'la dirección' : 'los equipos'}. Una brecha así suele significar que el problema no se ve desde donde se decide.`
+        : undefined,
+  };
+}
+
+/** El nivel que ve peor la organización, contra el que la ve mejor. */
+export function rolesSpreadInsight(payload: IndicesByRolePayload): Insight {
+  const conImc = payload.roles.filter((row): row is typeof row & { imc: number } => row.imc !== null);
+  if (conImc.length < 2) {
+    return {
+      tone: 'neutral',
+      headline: 'Se necesitan al menos dos niveles de cargo con la cohorte mínima para compararlos.',
+      detail: payload.suppressedRoles > 0 ? `${payload.suppressedRoles} niveles ocultos por tener pocas respuestas.` : undefined,
+    };
+  }
+  const ordenados = [...conImc].sort((a, b) => a.imc - b.imc);
+  const critico = ordenados[0];
+  const conforme = ordenados[ordenados.length - 1];
+  const distancia = conforme.imc - critico.imc;
+  return {
+    tone: distancia >= 15 ? 'warn' : 'neutral',
+    headline:
+      distancia >= 8
+        ? `El nivel ${critico.label.toLowerCase()} es el más crítico (${nf(critico.imc, 1)}) y ${conforme.label.toLowerCase()} el más conforme (${nf(conforme.imc, 1)})`
+        : `Los niveles de cargo coinciden en cómo ven la organización: ${nf(distancia, 1)} puntos entre el más crítico y el más conforme`,
+  };
+}
+
+// ---------------------------------------------------------------- red de interacción
+
+/** El área de la que más depende el resto: la que más personas nombran como interlocutora. */
+export function demandInsight(payload: NetworkPayload): Insight {
+  const conMenciones = payload.demand.filter((row) => row.mentions > 0);
+  if (conMenciones.length === 0) {
+    return { tone: 'neutral', headline: 'Todavía nadie ha declarado con qué áreas interactúa.' };
+  }
+  const top = conMenciones[0];
+  const sinMenciones = payload.demand.length - conMenciones.length;
+  return {
+    tone: 'neutral',
+    headline: `${top.areaName} es el área más demandada: la nombra el ${nf(top.mentionShare, 0)}\u202f% de quienes respondieron`,
+    emphasis: top.areaName,
+    detail: `${top.principal} ${top.principal === 1 ? 'persona la tiene' : 'personas la tienen'} como su relación principal.${sinMenciones > 0 ? ` ${sinMenciones} ${sinMenciones === 1 ? 'área no aparece' : 'áreas no aparecen'} como interlocutora frecuente de nadie.` : ''}`,
+  };
+}
+
+/**
+ * Las áreas críticas para la colaboración: muy demandadas y mal valoradas. Son la palanca
+ * más rentable del diagnóstico, porque mejorar la relación con ellas mejora el día a día
+ * de muchas personas a la vez.
+ */
+export function importanceInsight(payload: NetworkPayload): Insight {
+  const filas = payload.importance;
+  if (filas.length < 2) {
+    return {
+      tone: 'neutral',
+      headline: 'Faltan áreas con relacionamiento publicable para cruzar demanda y desempeño.',
+      detail: 'El cruce aparece cuando las áreas más nombradas alcanzan la cohorte mínima de evaluaciones.',
+    };
+  }
+  const mediana = (values: number[]) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  };
+  const mMenciones = mediana(filas.map((row) => row.mentions));
+  const mIrel = mediana(filas.map((row) => row.irel));
+  const criticas = filas
+    .filter((row) => row.mentions >= mMenciones && row.irel < mIrel)
+    .sort((a, b) => b.mentions - a.mentions);
+
+  if (criticas.length === 0) {
+    return {
+      tone: 'good',
+      headline: 'Las áreas más demandadas son también de las mejor valoradas',
+      detail: 'Ninguna área cae en el cuadrante crítico: alta demanda y relacionamiento por debajo de la mediana.',
+    };
+  }
+  const nombres = criticas.slice(0, 2).map((row) => row.areaName);
+  const lista = nombres.length === 1 ? nombres[0] : `${nombres[0]} y ${nombres[1]}`;
+  return {
+    tone: 'warn',
+    headline: `${lista} ${nombres.length === 1 ? 'es crítica' : 'son críticas'} para la colaboración: muy demandadas y por debajo en relacionamiento`,
+    emphasis: lista,
+    detail: 'Mejorar la relación con un área muy demandada mejora el día a día de muchas personas a la vez: es la palanca más rentable del mapa.',
+  };
+}
+
+export function frequencyInsight(rows: DistributionRow[]): Insight {
+  const total = rows.reduce((sum, row) => sum + row.count, 0);
+  if (total === 0) return { tone: 'neutral', headline: 'Sin datos de frecuencia de interacción.' };
+  const shareOf = (values: string[]) =>
+    rows.filter((row) => values.includes(row.value)).reduce((sum, row) => sum + row.share, 0);
+  const intensa = shareOf(['DIARIA', 'VARIAS_SEMANA']);
+  const esporadica = shareOf(['MENSUAL', 'ESPORADICA']);
+  return {
+    tone: 'neutral',
+    headline: `El ${nf(intensa, 0)}\u202f% interactúa con otras áreas a diario o varias veces por semana`,
+    detail:
+      intensa >= 60
+        ? 'Con una interacción tan frecuente, cada fricción entre áreas se repite muchas veces por semana.'
+        : esporadica >= 40
+          ? `El ${nf(esporadica, 0)}\u202f% lo hace solo una vez al mes o menos: ahí los acuerdos de servicio pesan más que la relación del día a día.`
+          : `Otro ${nf(100 - intensa - esporadica, 0)}\u202f% interactúa semanalmente y el ${nf(esporadica, 0)}\u202f%, una vez al mes o menos.`,
+  };
+}
+
+export function interactionTypesInsight(rows: CountedOption[]): Insight {
+  const conDato = rows.filter((row) => row.count > 0);
+  if (conDato.length === 0) return { tone: 'neutral', headline: 'Sin datos del tipo de interacción.' };
+  const top = conDato[0];
+  const estrategica = rows.find((row) => row.value === 'ESTRATEGICA');
+  return {
+    tone: 'neutral',
+    headline: `La interacción es sobre todo ${top.label.toLowerCase()}: la marca el ${nf(top.share, 0)}\u202f%`,
+    detail: estrategica
+      ? `La estratégica la marca el ${nf(estrategica.share, 0)}\u202f%. Selección múltiple: los porcentajes suman más de 100.`
+      : undefined,
+  };
+}
+
+/** Lo que las demás áreas ven en cada una: valor aportado contra necesidad de fortalecer. */
+export function valueInsight(rows: NetworkPayload['valueVsStrengthen']): Insight {
+  if (rows.length === 0) return { tone: 'neutral', headline: 'Nadie ha señalado áreas de valor ni a fortalecer.' };
+  const porValor = [...rows].sort((a, b) => b.value - a.value)[0];
+  const porFortalecer = [...rows].sort((a, b) => b.strengthen - a.strengthen)[0];
+  const ambas = rows.find((row) => row.value >= 2 && row.strengthen >= 2);
+  return {
+    tone: ambas ? 'warn' : 'neutral',
+    headline: ambas
+      ? `${ambas.areaName} divide: unos la ven como la que más valor aporta y otros piden fortalecerla`
+      : `${porValor.areaName} es la que más valor aporta según las demás; ${porFortalecer.areaName}, la que más piden fortalecer`,
+    detail: `${porValor.areaName}: ${porValor.value} ${porValor.value === 1 ? 'mención' : 'menciones'} de valor · ${porFortalecer.areaName}: ${porFortalecer.strengthen} de fortalecer.`,
+  };
+}
+
+export function isolationInsight(innovation: NetworkPayload['innovation'], totalAreas: number): Insight {
+  if (innovation.respondents === 0) {
+    return { tone: 'neutral', headline: 'Sin datos de iniciativas conjuntas.' };
+  }
+  return {
+    tone: innovation.noneShare >= 40 || innovation.isolated.length > totalAreas / 2 ? 'warn' : 'neutral',
+    headline: `${innovation.isolated.length} de ${totalAreas} áreas no aparecen en ninguna iniciativa conjunta`,
+    detail: `El ${nf(innovation.noneShare, 0)}\u202f% de quienes respondieron no ha desarrollado nada nuevo con otra área en seis meses.`,
+  };
+}
+
+// ---------------------------------------------------------------- calidad del corte
+
+/**
+ * Qué tanto se puede confiar en el corte. Una respuesta en línea recta (la misma nota en
+ * todo) o hecha a la carrera no miente sobre la persona, pero tampoco informa: diluye las
+ * diferencias que el instrumento busca.
+ */
+export function qualityInsight(quality: QualityPayload): Insight {
+  if (quality.completed === 0) return { tone: 'neutral', headline: 'Todavía no hay encuestas completas que revisar.' };
+  const rapidas = quality.speeders.share ?? 0;
+  const rectas = quality.straightLining.share ?? 0;
+  const dudosas = Math.max(rapidas, rectas);
+  return {
+    tone: dudosas >= 30 ? 'bad' : dudosas >= 15 ? 'warn' : 'good',
+    headline:
+      dudosas >= 15
+        ? `El ${nf(dudosas, 0)}\u202f% de las respuestas ${rapidas >= rectas ? 'se hizo en menos de 5 minutos' : 'da la misma nota a todo'}: el corte hay que leerlo con cautela`
+        : 'El corte es confiable: pocas respuestas a la carrera o con la misma nota en todo',
+    detail: `${quality.speeders.count} en menos de 5 min · ${quality.straightLining.count} en línea recta · ${quality.openAnswers.count} con respuesta abierta.`,
+  };
+}
+
+// ============ INFLUENCIAS (KPI 32) ============
+
+/** Cómo se nombra el nodo de la red: un área o una gestión. Las dos son femeninas. */
+export interface InfluenceUnit {
+  one: string;
+  many: string;
+}
+
+export const ZONE_LABELS: Record<InfluenceZone, string> = {
+  MOTRIZ: 'Motriz',
+  ENLACE: 'De enlace',
+  DEPENDIENTE: 'Dependiente',
+  AUTONOMA: 'Autónoma',
+};
+
+const count = (value: number, unit: InfluenceUnit) => `${value} ${value === 1 ? unit.one : unit.many}`;
+
+/**
+ * Una nota en la mitad baja del semáforo (con cuatro bandas: «En riesgo» o «Crítico»). Por
+ * posición, no por nombre: las etiquetas son editables.
+ */
+export function isLowScore(value: number | null, bands: ThresholdBand[]): boolean {
+  const band = classify(value, bands);
+  if (!band) return false;
+  return bands.indexOf(band) >= Math.ceil(bands.length / 2);
+}
+
+/** La que más mueve: la primera motriz; si no hay, la de enlace que más mueve. */
+function topMover(level: InfluenceLevel): InfluenceNode | null {
+  const motrices = level.nodes.filter((node) => node.zone === 'MOTRIZ');
+  const pool = motrices.length > 0 ? motrices : level.nodes.filter((node) => node.zone === 'ENLACE');
+  return [...pool].sort((a, b) => b.motricidad - a.motricidad)[0] ?? null;
+}
+
+/** La que más resiente: la dependiente que más depende, entre las que tienen la dependencia medida. */
+function topMoved(level: InfluenceLevel): InfluenceNode | null {
+  const medidas = level.nodes.filter((node) => node.grantedBy > 0);
+  const dependientes = medidas.filter((node) => node.zone === 'DEPENDIENTE');
+  const pool = dependientes.length > 0 ? dependientes : medidas.filter((node) => node.zone === 'ENLACE');
+  return [...pool].sort((a, b) => b.dependencia - a.dependencia)[0] ?? null;
+}
+
+/** El titular de la sección: quién mueve el sistema y quién lo resiente. */
+export function influenceInsight(level: InfluenceLevel, unit: InfluenceUnit, bands: ThresholdBand[]): Insight {
+  const mover = topMover(level);
+  const moved = topMoved(level);
+  if (!mover) {
+    return {
+      tone: 'neutral',
+      headline: `Todavía no hay relaciones entre ${unit.many} para leer quién mueve a quién`,
+    };
+  }
+  const tone: Tone = isLowScore(mover.irelReceived, bands) ? 'warn' : 'neutral';
+  if (!moved || moved.code === mover.code) {
+    return {
+      tone,
+      headline: `${mover.name} mueve el sistema: ${count(mover.clients, unit)} dependen de ella`,
+      emphasis: 'mueve el sistema',
+    };
+  }
+  return {
+    tone,
+    headline: `${mover.name} mueve el sistema y ${moved.name} lo resiente`,
+    emphasis: 'mueve el sistema',
+    detail: `${mover.name} sostiene a ${count(mover.clients, unit)}${mover.irelReceived !== null ? ` y recibe un relacionamiento de ${formatIndex(mover.irelReceived, 1)}` : ''}; ${moved.name} depende de ${count(moved.providers, unit)}. Mejorar a las motrices se siente en cadena; atender solo a las dependientes alivia sin resolver la causa.`,
+  };
+}
+
+/** La tarjeta de la red: lo más urgente que dicen las flechas visibles. */
+export function influenceNetworkInsight(level: InfluenceLevel, unit: InfluenceUnit, bands: ThresholdBand[]): Insight {
+  if (level.edges.length === 0) {
+    return {
+      tone: 'neutral',
+      headline: `Ninguna relación entre ${unit.many} alcanza todavía la cohorte`,
+      detail:
+        level.suppressedEdges > 0
+          ? `${level.suppressedEdges} relaciones existen, pero cada una la sostienen menos personas que la cohorte mínima. Se ven las ${unit.many} en su zona, sin las flechas.`
+          : undefined,
+    };
+  }
+  const names = new Map(level.nodes.map((node) => [node.code, node.name]));
+  const bajas = level.edges.filter((edge) => isLowScore(edge.irel, bands));
+  if (bajas.length > 0) {
+    const peor = [...bajas].sort((a, b) => b.weight - a.weight)[0];
+    return {
+      tone: 'warn',
+      headline:
+        bajas.length === level.edges.length
+          ? `Todas las relaciones visibles están por debajo de lo aceptable`
+          : `${bajas.length} de las ${level.edges.length} relaciones visibles están por debajo de lo aceptable`,
+      emphasis: 'por debajo de lo aceptable',
+      detail: `La más intensa de ellas: ${names.get(peor.to)} depende de ${names.get(peor.from)} y le da ${formatIndex(peor.irel, 1)} de relacionamiento.`,
+    };
+  }
+  const fuerte = level.edges[0];
+  return {
+    tone: 'good',
+    headline: `La relación más intensa: ${names.get(fuerte.to)} depende de ${names.get(fuerte.from)}`,
+    emphasis: 'más intensa',
+    detail: 'Ninguna relación visible está por debajo de lo aceptable.',
+  };
+}
+
+/** La tarjeta de la matriz: de quién dependen más. */
+export function influenceMatrixInsight(level: InfluenceLevel, unit: InfluenceUnit): Insight {
+  const top = [...level.nodes].sort((a, b) => b.clients - a.clients || b.motricidad - a.motricidad)[0];
+  if (!top || top.clients === 0) {
+    return { tone: 'neutral', headline: `Todavía no hay relaciones entre ${unit.many}` };
+  }
+  return {
+    tone: 'neutral',
+    headline: `${top.name} es de la que más dependen: la buscan ${count(top.clients, unit)}`,
+    emphasis: top.name,
+    detail:
+      level.suppressedEdges > 0
+        ? `Los márgenes suman todas las relaciones; ${level.suppressedEdges} de ellas no se dibujan en la matriz porque no alcanzan la cohorte.`
+        : undefined,
+  };
+}
+
+/** La tarjeta del plano: cuántas mueven y cuántas resienten. */
+export function influencePlaneInsight(level: InfluenceLevel, unit: InfluenceUnit): Insight {
+  const by = (zone: InfluenceZone) => level.nodes.filter((node) => node.zone === zone).length;
+  const motrices = by('MOTRIZ');
+  const enlace = by('ENLACE');
+  const dependientes = by('DEPENDIENTE');
+  const autonomas = by('AUTONOMA');
+  const sinMedir = level.nodes.filter((node) => node.grantedBy === 0).length;
+  if (level.nodes.length < 2) {
+    return { tone: 'neutral', headline: `Hacen falta al menos dos ${unit.many} relacionadas para dibujar el plano` };
+  }
+  return {
+    tone: 'neutral',
+    headline: `${count(motrices, unit)} ${motrices === 1 ? 'mueve' : 'mueven'} el sistema y ${count(dependientes, unit)} ${dependientes === 1 ? 'depende' : 'dependen'} de él`,
+    detail: `${enlace} de enlace —un cambio en ellas se propaga— y ${autonomas} ${autonomas === 1 ? 'autónoma' : 'autónomas'}.${sinMedir > 0 ? ` ${sinMedir} sin la dependencia medida, porque nadie de ellas evaluó a otras.` : ''}`,
+  };
+}
+
+/**
+ * Las palancas: mueven a muchas (motrices o de enlace) y, primero, las peor calificadas.
+ * Mejorar el servicio de una de ellas se siente en cadena.
+ */
+export function influenceLevers(level: InfluenceLevel, limit = 4): InfluenceNode[] {
+  return level.nodes
+    .filter((node) => node.zone === 'MOTRIZ' || node.zone === 'ENLACE')
+    .sort(
+      (a, b) =>
+        (a.irelReceived ?? Number.POSITIVE_INFINITY) - (b.irelReceived ?? Number.POSITIVE_INFINITY) ||
+        b.motricidad - a.motricidad,
+    )
+    .slice(0, limit);
+}
+
+/**
+ * Los síntomas: dependen de muchas y mueven poco. Lo que les falla viene, en buena parte, de
+ * otras; atacarlas de frente alivia sin resolver la causa. Solo las que tienen la dependencia
+ * medida: sin respuestas propias no se sabe de quién dependen.
+ */
+export function influenceSymptoms(level: InfluenceLevel, limit = 4): InfluenceNode[] {
+  return level.nodes
+    .filter((node) => node.zone === 'DEPENDIENTE' && node.grantedBy > 0)
+    .sort((a, b) => b.dependencia - a.dependencia)
+    .slice(0, limit);
 }
